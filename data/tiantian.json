@@ -1,1 +1,65 @@
-{"placeholder":true,"user":"tiantian"}
+{
+  "today": "Mon Apr 20 2026",
+  "water": 0,
+  "sleep": {
+    "bedTime": null,
+    "wakeTime": null,
+    "duration": 0,
+    "onTime": true
+  },
+  "footbath": {
+    "startTime": null,
+    "duration": 0,
+    "completed": false
+  },
+  "walk": {
+    "startTime": null,
+    "duration": 65,
+    "completed": true
+  },
+  "meals": {
+    "breakfast": {
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
+    },
+    "lunch": {
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
+    },
+    "dinner": {
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
+    }
+  },
+  "noEating": {
+    "completed": false
+  },
+  "weight": {
+    "value": null,
+    "bmi": null,
+    "category": null,
+    "time": null
+  },
+  "exercise": {
+    "weekCount": 0,
+    "type": null,
+    "startTime": null,
+    "duration": 0,
+    "todayCompleted": false
+  },
+  "morningRun": {
+    "weekCount": 0,
+    "startTime": null,
+    "duration": 0,
+    "todayCompleted": false
+  },
+  "streak": 0,
+  "history": {},
+  "lastModified": 1776690247672
+}
