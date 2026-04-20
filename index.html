@@ -2522,29 +2522,34 @@
         }
 
         // ===== 云同步模块 =====
-        const JSONBLOB_API = 'https://jsonblob.com/api/jsonBlob';
+        // ===== GitHub API 云同步 =====
+        // Token 通过 URL hash 传入，格式: #token=xxx
+        const GITHUB_REPO = 'shijiayan271-crypto/health-tracker';
+        const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/contents/data`;
+        function getGithubToken() {
+            // 优先从 URL hash 获取
+            const hash = window.location.hash;
+            const match = hash.match(/token=([^&]+)/);
+            if (match) {
+                // 存入 localStorage 以便下次自动使用
+                localStorage.setItem('ht_gh_token', match[1]);
+                // 清除 URL 中的 token（安全）
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+                return match[1];
+            }
+            // 从 localStorage 获取
+            return localStorage.getItem('ht_gh_token');
+        }
         let syncDebounceTimer = null;
-        const SYNC_DEBOUNCE_MS = 5000; // 最多每5秒同步一次
+        const SYNC_DEBOUNCE_MS = 5000;
         let isSyncing = false;
         let lastSyncTime = null;
+        let fileSha = {}; // 缓存文件 sha，更新时需要
 
-        // 固定 blob ID（跨域名通用，不依赖 localStorage）
-        const FIXED_BLOB_IDS = {
-            tiantian: '019daaf0-34fc-7a41-abe8-ebd0e8ea576b',
-            lele: '019daaf0-5075-7be0-b7c1-538084d40256'
-        };
-
-        // 获取当前用户的 blob ID（优先用固定ID，兼容旧的localStorage）
-        function getBlobId() {
+        // 获取当前用户的数据文件路径
+        function getCloudFileName() {
             if (!currentUser) return null;
-            if (FIXED_BLOB_IDS[currentUser]) return FIXED_BLOB_IDS[currentUser];
-            return localStorage.getItem(`healthTracker_blobId_${currentUser}`);
-        }
-
-        // 存储 blob ID
-        function setBlobId(blobId) {
-            if (!currentUser) return;
-            localStorage.setItem(`healthTracker_blobId_${currentUser}`, blobId);
+            return `${currentUser}.json`;
         }
 
         // 更新同步状态 UI
@@ -2578,6 +2583,7 @@
                     icon.textContent = '⚠️';
                     icon.classList.remove('spinning');
                     btn.classList.remove('spinning');
+                    timeEl.textContent = message || '同步失败';
                     break;
             }
         }
@@ -2590,83 +2596,74 @@
             return `${h}:${m}`;
         }
 
-        // 创建新的 blob
-        async function createBlob(data) {
-            try {
-                const resp = await fetch(JSONBLOB_API, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                // jsonblob returns Location header with full URL
-                const location = resp.headers.get('Location');
-                if (location) {
-                    const blobId = location.split('/').pop();
-                    return blobId;
-                }
-                // Fallback: try to extract from response
-                const result = await resp.json();
-                return null;
-            } catch (e) {
-                console.warn('Cloud: create blob failed', e);
-                return null;
-            }
-        }
-
-        // 从云端获取数据
+        // 从 GitHub 获取数据
         async function fetchFromCloud() {
-            const blobId = getBlobId();
-            if (!blobId) return null;
+            const fileName = getCloudFileName();
+            if (!fileName) return null;
             try {
-                const resp = await fetch(`${JSONBLOB_API}/${blobId}`, {
-                    headers: { 'Accept': 'application/json' }
+                const ghToken = getGithubToken();
+                if (!ghToken) { console.warn('Cloud: no GitHub token'); return null; }
+                const resp = await fetch(`${GITHUB_API}/${fileName}`, {
+                    headers: {
+                        'Authorization': `Bearer ${ghToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'If-None-Match': '' // 避免缓存
+                    },
+                    cache: 'no-store'
                 });
                 if (!resp.ok) {
-                    if (resp.status === 404) {
-                        // Blob was deleted, clear stored ID
-                        localStorage.removeItem(`healthTracker_blobId_${currentUser}`);
-                    }
+                    if (resp.status === 404) return null;
                     throw new Error(`HTTP ${resp.status}`);
                 }
-                return await resp.json();
+                const fileData = await resp.json();
+                fileSha[currentUser] = fileData.sha;
+                // GitHub 返回 base64 编码的内容
+                const content = atob(fileData.content.replace(/\n/g, ''));
+                return JSON.parse(content);
             } catch (e) {
                 console.warn('Cloud: fetch failed', e);
                 return null;
             }
         }
 
-        // 上传数据到云端
+        // 上传数据到 GitHub
         async function pushToCloud(data) {
-            let blobId = getBlobId();
+            const fileName = getCloudFileName();
+            if (!fileName) return false;
             try {
-                if (!blobId) {
-                    // 首次使用，创建 blob
-                    blobId = await createBlob(data);
-                    if (blobId) {
-                        setBlobId(blobId);
-                        return true;
-                    }
-                    return false;
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+                const body = {
+                    message: `sync ${currentUser} data ${new Date().toISOString().slice(0,16)}`,
+                    content: content
+                };
+                // 更新已有文件需要 sha
+                if (fileSha[currentUser]) {
+                    body.sha = fileSha[currentUser];
                 }
-                // 更新现有 blob
-                const resp = await fetch(`${JSONBLOB_API}/${blobId}`, {
+                const ghToken = getGithubToken();
+                if (!ghToken) { console.warn('Cloud: no GitHub token'); return false; }
+                const resp = await fetch(`${GITHUB_API}/${fileName}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify(data)
+                    headers: {
+                        'Authorization': `Bearer ${ghToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify(body)
                 });
                 if (!resp.ok) {
-                    if (resp.status === 404) {
-                        // Blob gone, re-create
-                        localStorage.removeItem(`healthTracker_blobId_${currentUser}`);
-                        const newId = await createBlob(data);
-                        if (newId) {
-                            setBlobId(newId);
-                            return true;
-                        }
+                    if (resp.status === 409) {
+                        // sha 冲突，重新获取最新 sha 再试
+                        console.warn('Cloud: sha conflict, refetching...');
+                        await fetchFromCloud();
+                        return await pushToCloud(data); // 重试一次
                     }
+                    const errText = await resp.text();
+                    console.warn('Cloud: push failed', resp.status, errText);
                     throw new Error(`HTTP ${resp.status}`);
                 }
+                const result = await resp.json();
+                fileSha[currentUser] = result.content.sha;
                 return true;
             } catch (e) {
                 console.warn('Cloud: push failed', e);
@@ -2701,30 +2698,7 @@
             if (!currentUser) return;
             updateSyncUI('syncing');
             try {
-                let cloudData = await fetchFromCloud();
-
-                // 迁移逻辑：如果固定 blob 是空/placeholder，尝试从旧的 localStorage blob ID 迁移
-                if (FIXED_BLOB_IDS[currentUser] && (!cloudData || !cloudData.lastModified)) {
-                    const oldBlobId = localStorage.getItem(`healthTracker_blobId_${currentUser}`);
-                    if (oldBlobId && oldBlobId !== FIXED_BLOB_IDS[currentUser]) {
-                        try {
-                            const oldResp = await fetch(`${JSONBLOB_API}/${oldBlobId}`, {
-                                headers: { 'Accept': 'application/json' }
-                            });
-                            if (oldResp.ok) {
-                                const oldData = await oldResp.json();
-                                if (oldData && oldData.lastModified) {
-                                    // 找到旧数据，迁移到固定 blob
-                                    cloudData = oldData;
-                                    await pushToCloud(oldData);
-                                    console.log('Cloud: migrated data from old blob to fixed blob');
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Cloud: migration from old blob failed', e);
-                        }
-                    }
-                }
+                const cloudData = await fetchFromCloud();
 
                 if (cloudData && cloudData.lastModified) {
                     const localModified = appState.lastModified || 0;
@@ -2755,7 +2729,6 @@
         // 手动同步按钮
         async function manualSync() {
             if (isSyncing || !currentUser) return;
-            // 先推送本地数据
             isSyncing = true;
             updateSyncUI('syncing');
             appState.lastModified = Date.now();
@@ -2773,11 +2746,9 @@
             }
         }
 
-        // 网络状态监听：恢复在线时自动同步
+        // 网络状态监听
         window.addEventListener('online', () => {
-            if (currentUser) {
-                syncToCloud();
-            }
+            if (currentUser) syncToCloud();
         });
 
         window.addEventListener('offline', () => {
