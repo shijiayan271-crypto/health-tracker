@@ -1,0 +1,3311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>健康习惯监督</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .greeting {
+            font-size: 16px;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .task-section {
+            margin-bottom: 20px;
+            animation: fadeInUp 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .task-section:nth-child(2) { animation-delay: 0.1s; }
+        .task-section:nth-child(3) { animation-delay: 0.2s; }
+        .task-section:nth-child(4) { animation-delay: 0.3s; }
+
+        .section-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-left: 5px;
+        }
+
+        .task-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .task-card:active {
+            transform: scale(0.98);
+        }
+
+        .task-card.completed {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .task-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .task-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .task-emoji {
+            font-size: 24px;
+        }
+
+        .task-status {
+            font-size: 24px;
+        }
+
+        .water-counter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .water-cups {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .water-cup {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 20px;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .water-cup.filled {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .sleep-tracker {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .sleep-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .sleep-btn.sleep {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .sleep-btn.wakeup {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .sleep-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sleep-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .sleep-info.warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ff9800;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .timer-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .timer-btn.secondary {
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+        }
+
+        .timer-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .timer-display {
+            flex: 1;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .meal-tracker {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .meal-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .meal-icon {
+            font-size: 20px;
+        }
+
+        .meal-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .meal-tags {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .meal-tag {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            background: white;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .meal-tag.checked {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            border-color: #84fab0;
+            transform: scale(1.05);
+        }
+
+        .meal-tag.protein {
+            border-color: #ff6b6b;
+        }
+
+        .meal-tag.protein.checked {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa06b 100%);
+            border-color: #ff6b6b;
+        }
+
+        .meal-tag.grain {
+            border-color: #ffa500;
+        }
+
+        .meal-tag.grain.checked {
+            background: linear-gradient(135deg, #ffa500 0%, #ffcb00 100%);
+            border-color: #ffa500;
+        }
+
+        .meal-tag.window-in {
+            border-color: #4caf50;
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+        }
+
+        .meal-tag.window-out {
+            border-color: #ff9800;
+            background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+        }
+
+        .meal-tag.unchecked {
+            border-color: #ccc;
+            background: #f5f5f5;
+        }
+
+        .weekly-task {
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+        }
+
+        .weekly-progress {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .progress-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .exercise-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .exercise-type {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .exercise-type.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            /* 移动端触摸优化 */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .fab:active {
+            transform: scale(0.9);
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        .celebration-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .celebration-content {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            animation: bounceIn 0.6s ease;
+        }
+
+        .celebration-emoji {
+            font-size: 100px;
+            margin-bottom: 20px;
+        }
+
+        .celebration-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .celebration-subtext {
+            font-size: 18px;
+            color: #666;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .history-list {
+            list-style: none;
+        }
+
+        .history-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-name {
+            font-size: 15px;
+            color: #333;
+        }
+
+        .history-item-status {
+            font-size: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes pulseBig {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        .streak-fire {
+            display: inline-block;
+            animation: pulse 1s infinite;
+        }
+
+        /* ===== 用户选择屏幕 ===== */
+        .user-select-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .user-select-screen.hidden {
+            display: none;
+        }
+
+        .user-select-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .user-select-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 15px;
+            margin-bottom: 40px;
+        }
+
+        .user-cards {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .user-card {
+            width: 150px;
+            min-height: 180px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            padding: 20px;
+        }
+
+        .user-card:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .user-card:active {
+            transform: scale(0.98);
+        }
+
+        .user-card-emoji {
+            font-size: 60px;
+            margin-bottom: 16px;
+        }
+
+        .user-card-name {
+            color: white;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        /* ===== 用户头像按钮 ===== */
+        .user-avatar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .user-avatar-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .user-avatar-btn:active {
+            transform: scale(0.95);
+        }
+
+        .user-avatar-emoji {
+            font-size: 20px;
+        }
+
+        .user-avatar-name {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* ===== 切换确认弹窗 ===== */
+        .switch-confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 19999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .switch-confirm-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 320px;
+            width: 90%;
+            animation: slideUp 0.3s ease;
+        }
+
+        .switch-confirm-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .switch-confirm-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .switch-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .switch-btn.cancel {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .switch-btn.confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .switch-btn:active {
+            transform: scale(0.95);
+        }
+
+        .streak-fire.medium {
+            animation: pulse 0.8s infinite;
+            filter: hue-rotate(20deg);
+        }
+
+        .streak-fire.high {
+            animation: pulseBig 0.6s infinite;
+            filter: hue-rotate(40deg);
+        }
+
+        /* ===== 云同步指示器 ===== */
+        .sync-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 4px 12px;
+            margin-left: 8px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            vertical-align: middle;
+            cursor: default;
+            transition: all 0.3s ease;
+        }
+
+        .sync-icon {
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .sync-icon.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px;
+            line-height: 1;
+            transition: transform 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sync-btn:active {
+            transform: scale(0.85);
+        }
+
+        .sync-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-time {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .water-cup {
+                width: 45px;
+                height: 45px;
+            }
+
+            .fab {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .modal-content {
+                max-width: 95%;
+            }
+
+            .fab#dashboard-fab {
+                right: 90px;
+            }
+        }
+
+        /* ===== 体重记录样式 ===== */
+        .weight-input-area {
+            margin-top: 10px;
+        }
+
+        .weight-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .weight-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            min-height: 48px;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .weight-input:focus {
+            border-color: #667eea;
+        }
+
+        .weight-unit {
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .weight-save-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 48px;
+            white-space: nowrap;
+        }
+
+        .weight-save-btn:active {
+            transform: scale(0.95);
+        }
+
+        .weight-save-btn.recorded {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #333;
+        }
+
+        .bmi-display {
+            margin-top: 12px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+
+        .bmi-display.show {
+            display: block;
+        }
+
+        .bmi-display.bmi-thin {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196f3;
+        }
+
+        .bmi-display.bmi-normal {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4caf50;
+        }
+
+        .bmi-display.bmi-overweight {
+            background: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+        }
+
+        .bmi-display.bmi-obese {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+
+        /* ===== Dashboard 样式 ===== */
+        .dashboard-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+            overflow: hidden;
+        }
+
+        .dashboard-modal.open {
+            display: block;
+        }
+
+        .dashboard-content {
+            background: #f5f5f7;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            animation: slideUp 0.3s ease;
+        }
+
+        .dashboard-header {
+            position: sticky;
+            top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            z-index: 10;
+        }
+
+        .dashboard-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .dashboard-range-toggle {
+            display: flex;
+            gap: 0;
+            margin: 16px 20px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .range-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #666;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .range-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+        }
+
+        .dashboard-charts {
+            padding: 0 16px 30px;
+        }
+
+        .chart-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .chart-section canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .streak-display {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .streak-big-number {
+            font-size: 64px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+
+        .streak-label {
+            font-size: 14px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        #dashboard-close {
+            font-size: 28px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.8);
+            transition: color 0.3s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 用户选择屏幕 -->
+    <div class="user-select-screen hidden" id="user-select-screen">
+        <div class="user-select-title">选择你的身份</div>
+        <div class="user-select-subtitle">每天进步一点点，遇见更好的自己</div>
+        <div class="user-cards">
+            <div class="user-card" onclick="selectUser('tiantian')">
+                <div class="user-card-emoji">🌸</div>
+                <div class="user-card-name">田田</div>
+            </div>
+            <div class="user-card" onclick="selectUser('lele')">
+                <div class="user-card-emoji">🌿</div>
+                <div class="user-card-name">乐乐</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 切换用户确认弹窗 -->
+    <div class="switch-confirm-modal" id="switch-confirm-modal">
+        <div class="switch-confirm-content">
+            <div class="switch-confirm-text" id="switch-confirm-text">切换用户？</div>
+            <div class="switch-confirm-buttons">
+                <button class="switch-btn cancel" onclick="closeSwitchModal()">取消</button>
+                <button class="switch-btn confirm" onclick="confirmSwitch()">确认切换</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="main-container">
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;">
+                <div class="user-avatar-btn" id="user-avatar-btn" onclick="showSwitchModal()">
+                    <span class="user-avatar-emoji" id="user-avatar-emoji">🌸</span>
+                    <span class="user-avatar-name" id="user-avatar-name">田田</span>
+                </div>
+                <div class="sync-bar" id="sync-bar">
+                    <span class="sync-icon" id="sync-icon">✅</span>
+                    <span class="sync-time" id="sync-time"></span>
+                    <button class="sync-btn" id="sync-btn" onclick="manualSync()" title="手动同步">🔄</button>
+                </div>
+            </div>
+            <h1>健康习惯监督</h1>
+            <p>每天进步一点点，遇见更好的自己</p>
+            <p class="greeting" id="greeting"></p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value"><span id="streak-count">0</span><span class="streak-fire" id="streak-fire">🔥</span></div>
+                <div class="stat-label">连续打卡</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="week-completion">0%</div>
+                <div class="stat-label">本周完成率</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="today-completion">0/8</div>
+                <div class="stat-label">今日完成</div>
+            </div>
+        </div>
+
+        <div class="task-section">
+            <div class="section-title">💧 每日任务</div>
+
+            <!-- 喝水 -->
+            <div class="task-card" id="water-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">💧</span>
+                        <span>喝水</span>
+                    </div>
+                    <span class="task-status" id="water-status">⚪</span>
+                </div>
+                <div class="water-counter">
+                    <div class="water-cups" id="water-cups">
+                        <div class="water-cup" data-cup="1">💧</div>
+                        <div class="water-cup" data-cup="2">💧</div>
+                        <div class="water-cup" data-cup="3">💧</div>
+                        <div class="water-cup" data-cup="4">💧</div>
+                        <div class="water-cup" data-cup="5">💧</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 睡眠 -->
+            <div class="task-card" id="sleep-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">😴</span>
+                        <span>睡眠</span>
+                    </div>
+                    <span class="task-status" id="sleep-status">⚪</span>
+                </div>
+                <div class="sleep-tracker">
+                    <button class="sleep-btn sleep" id="sleep-btn">准备睡觉</button>
+                    <button class="sleep-btn wakeup" id="wakeup-btn" disabled>起床打卡</button>
+                </div>
+                <div class="sleep-info" id="sleep-info"></div>
+            </div>
+
+            <!-- 泡脚 -->
+            <div class="task-card" id="footbath-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🦶</span>
+                        <span>泡脚</span>
+                    </div>
+                    <span class="task-status" id="footbath-status">⚪</span>
+                </div>
+                <div class="timer-controls">
+                    <button class="timer-btn" id="footbath-start">开始</button>
+                    <div class="timer-display" id="footbath-timer">00:00</div>
+                    <button class="timer-btn" id="footbath-finish" disabled>完成</button>
+                </div>
+                <div class="timer-controls" id="footbath-cancel-container" style="display: none; margin-top: 5px;">
+                    <button class="timer-btn secondary" id="footbath-cancel" style="width: 100%;">放弃本次</button>
+                </div>
+            </div>
+
+            <!-- 快走 -->
+            <div class="task-card" id="walk-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🚶</span>
+                        <span>快走</span>
+                    </div>
+                    <span class="task-status" id="walk-status">⚪</span>
+                </div>
+                <div class="timer-controls">
+                    <button class="timer-btn" id="walk-start">开始</button>
+                    <div class="timer-display" id="walk-timer">00:00</div>
+                    <button class="timer-btn" id="walk-finish" disabled>完成</button>
+                </div>
+                <div class="timer-controls" id="walk-cancel-container" style="display: none; margin-top: 5px;">
+                    <button class="timer-btn secondary" id="walk-cancel" style="width: 100%;">放弃本次</button>
+                </div>
+            </div>
+
+            <!-- 三餐 -->
+            <div class="task-card" id="meals-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🍽️</span>
+                        <span>三餐</span>
+                    </div>
+                    <span class="task-status" id="meals-status">⚪</span>
+                </div>
+                <div class="meal-tracker">
+                    <div class="meal-item" id="breakfast-item">
+                        <div class="meal-left">
+                            <span class="meal-icon">🌅</span>
+                            <span class="meal-name">早餐</span>
+                        </div>
+                        <div class="meal-tags">
+                            <div class="meal-tag unchecked" id="breakfast-check" data-meal="breakfast" title="打卡早餐">✅</div>
+                            <div class="meal-tag protein" id="breakfast-protein" data-meal="breakfast" data-type="protein" title="蛋白质">🥩</div>
+                            <div class="meal-tag grain" id="breakfast-grain" data-meal="breakfast" data-type="grain" title="粗粮">🌾</div>
+                        </div>
+                    </div>
+                    <div class="meal-item" id="lunch-item">
+                        <div class="meal-left">
+                            <span class="meal-icon">☀️</span>
+                            <span class="meal-name">午餐</span>
+                        </div>
+                        <div class="meal-tags">
+                            <div class="meal-tag unchecked" id="lunch-check" data-meal="lunch" title="打卡午餐">✅</div>
+                            <div class="meal-tag protein" id="lunch-protein" data-meal="lunch" data-type="protein" title="蛋白质">🥩</div>
+                            <div class="meal-tag grain" id="lunch-grain" data-meal="lunch" data-type="grain" title="粗粮">🌾</div>
+                        </div>
+                    </div>
+                    <div class="meal-item" id="dinner-item">
+                        <div class="meal-left">
+                            <span class="meal-icon">🌙</span>
+                            <span class="meal-name">晚餐</span>
+                        </div>
+                        <div class="meal-tags">
+                            <div class="meal-tag unchecked" id="dinner-check" data-meal="dinner" title="打卡晚餐">✅</div>
+                            <div class="meal-tag protein" id="dinner-protein" data-meal="dinner" data-type="protein" title="蛋白质">🥩</div>
+                            <div class="meal-tag grain" id="dinner-grain" data-meal="dinner" data-type="grain" title="粗粮">🌾</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 19:30后禁食 -->
+            <div class="task-card" id="no-eating-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🚫</span>
+                        <span>19:30后禁食</span>
+                    </div>
+                    <span class="task-status" id="no-eating-status">⚪</span>
+                </div>
+                <div class="timer-controls">
+                    <button class="timer-btn" id="no-eating-btn" disabled>今天19:30后没有进食</button>
+                </div>
+            </div>
+
+            <!-- 体重记录 -->
+            <div class="task-card" id="weight-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">⚖️</span>
+                        <span>体重记录</span>
+                    </div>
+                    <span class="task-status" id="weight-status">⚪</span>
+                </div>
+                <div class="weight-input-area">
+                    <div class="weight-input-row">
+                        <input type="number" id="weight-input" class="weight-input" placeholder="输入体重" step="0.1" min="20" max="300" inputmode="decimal">
+                        <span class="weight-unit">kg</span>
+                        <button class="weight-save-btn" id="weight-save-btn">记录</button>
+                    </div>
+                    <div class="bmi-display" id="bmi-display"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="task-section">
+            <div class="section-title">🏃 每周任务</div>
+
+            <!-- 运动 -->
+            <div class="task-card" id="exercise-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🏃</span>
+                        <span>运动</span>
+                    </div>
+                    <span class="task-status" id="exercise-status">⚪</span>
+                </div>
+                <div class="weekly-task">
+                    <div class="weekly-progress">
+                        <span class="progress-text">本周完成</span>
+                        <span class="progress-count" id="exercise-count">0/2</span>
+                    </div>
+                    <div class="exercise-types" id="exercise-types">
+                        <div class="exercise-type" data-type="指压板慢跑">指压板慢跑</div>
+                        <div class="exercise-type" data-type="靠墙站">靠墙站</div>
+                        <div class="exercise-type" data-type="游泳">游泳</div>
+                        <div class="exercise-type" data-type="羽毛球">羽毛球</div>
+                        <div class="exercise-type" data-type="其他">其他</div>
+                    </div>
+                    <div class="timer-controls" style="margin-top: 10px;">
+                        <button class="timer-btn" id="exercise-start">开始</button>
+                        <div class="timer-display" id="exercise-timer">00:00</div>
+                        <button class="timer-btn" id="exercise-finish" disabled>完成</button>
+                    </div>
+                    <div class="timer-controls" id="exercise-cancel-container" style="display: none; margin-top: 5px;">
+                        <button class="timer-btn secondary" id="exercise-cancel" style="width: 100%;">放弃本次</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 晨跑 -->
+            <div class="task-card" id="morning-run-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <span class="task-emoji">🌅</span>
+                        <span>晨跑</span>
+                    </div>
+                    <span class="task-status" id="morning-run-status">⚪</span>
+                </div>
+                <div class="weekly-task">
+                    <div class="weekly-progress">
+                        <span class="progress-text">本周完成</span>
+                        <span class="progress-count" id="morning-run-count">0/2</span>
+                    </div>
+                    <div class="timer-controls" style="margin-top: 10px;">
+                        <button class="timer-btn" id="morning-run-start">开始</button>
+                        <div class="timer-display" id="morning-run-timer">00:00</div>
+                        <button class="timer-btn" id="morning-run-finish" disabled>完成</button>
+                    </div>
+                    <div class="timer-controls" id="morning-run-cancel-container" style="display: none; margin-top: 5px;">
+                        <button class="timer-btn secondary" id="morning-run-cancel" style="width: 100%;">放弃本次</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fab" id="dashboard-fab" style="right: 100px;">📊</div>
+    <div class="fab" id="calendar-fab">📅</div>
+
+    <!-- 健康趋势 Dashboard -->
+    <div class="dashboard-modal" id="dashboard-modal">
+        <div class="dashboard-content">
+            <div class="dashboard-header">
+                <div class="dashboard-title">📊 健康趋势</div>
+                <div class="modal-close" id="dashboard-close">×</div>
+            </div>
+            <div class="dashboard-range-toggle">
+                <button class="range-btn active" data-range="7" id="range-7">最近7天</button>
+                <button class="range-btn" data-range="30" id="range-30">最近30天</button>
+            </div>
+            <div class="dashboard-charts">
+                <div class="chart-section">
+                    <div class="chart-title">⚖️ 体重 & BMI 趋势</div>
+                    <canvas id="chart-weight-bmi"></canvas>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title">💧 喝水趋势</div>
+                    <canvas id="chart-water"></canvas>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title">😴 睡眠趋势</div>
+                    <canvas id="chart-sleep"></canvas>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title">✅ 每日完成率</div>
+                    <canvas id="chart-completion"></canvas>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title">🔥 连续打卡</div>
+                    <div class="streak-display" id="streak-display">
+                        <div class="streak-big-number" id="streak-big-number">0</div>
+                        <div class="streak-label">天连续打卡</div>
+                    </div>
+                    <canvas id="chart-streak"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="celebration-modal" id="celebration-modal">
+        <div class="celebration-content">
+            <div class="celebration-emoji" id="celebration-emoji">🎉</div>
+            <div class="celebration-text" id="celebration-text">太棒了！</div>
+            <div class="celebration-subtext" id="celebration-subtext">今天也很努力呢</div>
+        </div>
+    </div>
+
+    <div class="modal" id="history-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="history-date">历史记录</div>
+                <div class="modal-close" id="history-close">×</div>
+            </div>
+            <ul class="history-list" id="history-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 数据结构
+        const encouragements = [
+            { emoji: '🎉', text: '太棒了！', subtext: '今天也很努力呢' },
+            { emoji: '💪', text: '坚持就是胜利！', subtext: '你做得很好' },
+            { emoji: '⭐', text: '真棒！', subtext: '离目标又近了一步' },
+            { emoji: '🌟', text: '继续加油！', subtext: '健康的生活从点滴做起' },
+            { emoji: '✨', text: '完美！', subtext: '你是最棒的' },
+            { emoji: '🎊', text: '了不起！', subtext: '保持这个节奏' }
+        ];
+
+        const allCompleteMessages = [
+            '完美的一天！你就是最棒的！🎊',
+            '全部完成！坚持下去，奇迹会发生 ✨',
+            '今天的你闪闪发光 🌟',
+            '太厉害了！9项全部完成！👏',
+            '你是健康达人！继续保持！💎'
+        ];
+
+        // ===== 多用户支持 =====
+        const USERS = {
+            tiantian: { emoji: '🌸', name: '田田', height: 161 },
+            lele: { emoji: '🌿', name: '乐乐', height: 191 }
+        };
+
+        let currentUser = null;
+
+        function showUserSelect() {
+            document.getElementById('user-select-screen').classList.remove('hidden');
+            document.getElementById('main-container').style.display = 'none';
+            document.querySelector('.fab').style.display = 'none';
+        }
+
+        function selectUser(userId) {
+            currentUser = userId;
+            localStorage.setItem('healthTracker_lastUser', userId);
+            document.getElementById('user-select-screen').classList.add('hidden');
+            document.getElementById('main-container').style.display = '';
+            document.querySelector('.fab').style.display = '';
+            updateUserAvatar();
+            loadData();
+            checkNewDay();
+            updateGreeting();
+            updateUI();
+        }
+
+        function updateUserAvatar() {
+            if (!currentUser) return;
+            const user = USERS[currentUser];
+            document.getElementById('user-avatar-emoji').textContent = user.emoji;
+            document.getElementById('user-avatar-name').textContent = user.name;
+        }
+
+        function showSwitchModal() {
+            const otherUserId = currentUser === 'tiantian' ? 'lele' : 'tiantian';
+            const otherUser = USERS[otherUserId];
+            document.getElementById('switch-confirm-text').textContent = `切换到${otherUser.emoji} ${otherUser.name}？当前页面会刷新`;
+            document.getElementById('switch-confirm-modal').style.display = 'flex';
+        }
+
+        function closeSwitchModal() {
+            document.getElementById('switch-confirm-modal').style.display = 'none';
+        }
+
+        function confirmSwitch() {
+            const otherUserId = currentUser === 'tiantian' ? 'lele' : 'tiantian';
+            localStorage.setItem('healthTracker_lastUser', otherUserId);
+            location.reload();
+        }
+
+        function getStorageKey() {
+            return `healthTrackerData_${currentUser}`;
+        }
+        // ===== 多用户支持结束 =====
+
+        // 全局状态
+        let appState = {
+            today: new Date().toDateString(),
+            water: 0,
+            sleep: { bedTime: null, wakeTime: null, duration: 0, onTime: true },
+            footbath: { startTime: null, duration: 0, completed: false },
+            walk: { startTime: null, duration: 0, completed: false },
+            meals: {
+                breakfast: { checked: false, protein: false, grain: false, time: null },
+                lunch: { checked: false, protein: false, grain: false, time: null },
+                dinner: { checked: false, protein: false, grain: false, time: null }
+            },
+            noEating: { completed: false },
+            weight: { value: null, bmi: null, category: null, time: null },
+            exercise: { weekCount: 0, type: null, startTime: null, duration: 0, todayCompleted: false },
+            morningRun: { weekCount: 0, startTime: null, duration: 0, todayCompleted: false },
+            streak: 0,
+            history: {}
+        };
+
+        // 定时器
+        let footbathInterval = null;
+        let walkInterval = null;
+        let exerciseInterval = null;
+        let morningRunInterval = null;
+
+        // 初始化
+        function init() {
+            // 检查是否有已记住的用户
+            const lastUser = localStorage.getItem('healthTracker_lastUser');
+            if (lastUser && USERS[lastUser]) {
+                currentUser = lastUser;
+                updateUserAvatar();
+                loadData();
+                checkNewDay();
+                updateGreeting();
+                updateUI();
+            } else {
+                // 首次访问，显示用户选择屏幕
+                showUserSelect();
+            }
+            bindEvents();
+            updateAllTimers();
+            setInterval(updateAllTimers, 1000);
+            setInterval(updateGreeting, 60000); // 每分钟更新一次问候语
+        }
+
+        // 更新问候语
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const userName = currentUser ? USERS[currentUser].name : '';
+            let greeting = '';
+
+            if (hour >= 6 && hour < 11) {
+                greeting = `早安${userName ? '，' + userName : ''}，新的一天开始啦 ☀️`;
+            } else if (hour >= 11 && hour < 14) {
+                greeting = `中午好${userName ? '，' + userName : ''}，记得吃午饭 🍱`;
+            } else if (hour >= 14 && hour < 18) {
+                greeting = `下午好${userName ? '，' + userName : ''}，继续加油 💪`;
+            } else if (hour >= 18 && hour < 22) {
+                greeting = `晚上好${userName ? '，' + userName : ''}，辛苦了一天 🌙`;
+            } else {
+                greeting = `夜深了${userName ? '，' + userName : ''}，早点休息 🌟`;
+            }
+
+            document.getElementById('greeting').textContent = greeting;
+        }
+
+        // 更新 streak 火焰样式
+        function updateStreakFire() {
+            const streakFire = document.getElementById('streak-fire');
+            const streak = appState.streak;
+
+            streakFire.classList.remove('medium', 'high');
+
+            if (streak >= 1 && streak <= 3) {
+                streakFire.textContent = '🔥';
+            } else if (streak >= 4 && streak <= 7) {
+                streakFire.textContent = '🔥🔥';
+                streakFire.classList.add('medium');
+            } else if (streak > 7) {
+                streakFire.textContent = '🔥🔥🔥';
+                streakFire.classList.add('high');
+            } else {
+                streakFire.textContent = '🔥';
+            }
+        }
+
+        // 加载数据
+        function loadData() {
+            if (!currentUser) return;
+            const saved = localStorage.getItem(getStorageKey());
+            if (saved) {
+                const data = JSON.parse(saved);
+                // 检查是否是新的一天
+                if (data.today === new Date().toDateString()) {
+                    appState = data;
+                } else {
+                    // 新的一天，保留历史和连续打卡数据
+                    appState.history = data.history || {};
+                    appState.streak = data.streak || 0;
+                    // 保留每周任务的本周数据（如果还在同一周）
+                    if (isSameWeek(new Date(data.today), new Date())) {
+                        appState.exercise.weekCount = data.exercise.weekCount || 0;
+                        appState.morningRun.weekCount = data.morningRun.weekCount || 0;
+                    }
+                    saveData();
+                }
+            }
+            // 尝试从云端同步（异步，不阻塞 UI）
+            syncFromCloud();
+        }
+
+        // 检查新一天
+        function checkNewDay() {
+            const today = new Date().toDateString();
+            if (appState.today !== today) {
+                // 保存昨天的数据到历史
+                const yesterday = new Date(appState.today);
+                appState.history[appState.today] = getCompletionStatus();
+
+                // 更新连续打卡
+                updateStreak();
+
+                // 重置今日数据
+                appState.today = today;
+                appState.water = 0;
+                appState.sleep = { bedTime: null, wakeTime: null, duration: 0, onTime: true };
+                appState.footbath = { startTime: null, duration: 0, completed: false };
+                appState.walk = { startTime: null, duration: 0, completed: false };
+                appState.meals = {
+                    breakfast: { checked: false, protein: false, grain: false, time: null },
+                    lunch: { checked: false, protein: false, grain: false, time: null },
+                    dinner: { checked: false, protein: false, grain: false, time: null }
+                };
+                appState.noEating = { completed: false };
+                appState.weight = { value: null, bmi: null, category: null, time: null };
+                appState.exercise.todayCompleted = false;
+                appState.morningRun.todayCompleted = false;
+
+                saveData();
+            }
+        }
+
+        // 判断是否同一周
+        function isSameWeek(date1, date2) {
+            const oneDay = 24 * 60 * 60 * 1000;
+            const firstDay = new Date(date1.getFullYear(), 0, 1);
+            const week1 = Math.ceil((((date1 - firstDay) / oneDay) + firstDay.getDay() + 1) / 7);
+            const week2 = Math.ceil((((date2 - firstDay) / oneDay) + firstDay.getDay() + 1) / 7);
+            return week1 === week2 && date1.getFullYear() === date2.getFullYear();
+        }
+
+        // 获取完成状态
+        function getCompletionStatus() {
+            const tasks = [
+                appState.water >= 5,
+                appState.sleep.duration >= 8,
+                appState.footbath.completed,
+                appState.walk.completed,
+                appState.meals.breakfast.checked && appState.meals.lunch.checked && appState.meals.dinner.checked,
+                appState.noEating.completed,
+                appState.weight && appState.weight.value !== null,
+                appState.exercise.weekCount >= 2,
+                appState.morningRun.weekCount >= 2
+            ];
+            return tasks;
+        }
+
+        // 更新连续打卡
+        function updateStreak() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toDateString();
+
+            if (appState.history[yesterdayStr]) {
+                const completed = appState.history[yesterdayStr].filter(t => t).length;
+                if (completed >= 5) { // 至少完成5项任务
+                    appState.streak++;
+                } else {
+                    appState.streak = 0;
+                }
+            }
+        }
+
+        // 保存数据
+        function saveData() {
+            if (!currentUser) return;
+            appState.lastModified = Date.now();
+            localStorage.setItem(getStorageKey(), JSON.stringify(appState));
+            // 触发云同步（防抖）
+            syncToCloud();
+        }
+
+        // 更新UI
+        function updateUI() {
+            // 更新统计
+            document.getElementById('streak-count').textContent = appState.streak;
+            updateStreakFire();
+
+            const status = getCompletionStatus();
+            const todayCompleted = status.filter(t => t).length;
+            document.getElementById('today-completion').textContent = `${todayCompleted}/9`;
+
+            const weekCompletion = Math.round((todayCompleted / 9) * 100);
+            document.getElementById('week-completion').textContent = `${weekCompletion}%`;
+
+            // 更新喝水
+            updateWaterUI();
+
+            // 更新睡眠
+            updateSleepUI();
+
+            // 更新泡脚
+            updateTimerUI('footbath', appState.footbath);
+
+            // 更新快走
+            updateTimerUI('walk', appState.walk);
+
+            // 更新三餐
+            updateMealsUI();
+
+            // 更新19:30后禁食
+            updateNoEatingUI();
+
+            // 更新体重
+            updateWeightUI();
+
+            // 更新运动
+            updateWeeklyTaskUI('exercise', appState.exercise);
+
+            // 更新晨跑
+            updateWeeklyTaskUI('morning-run', appState.morningRun);
+        }
+
+        // 更新喝水UI
+        function updateWaterUI() {
+            const cups = document.querySelectorAll('.water-cup');
+            cups.forEach((cup, index) => {
+                if (index < appState.water) {
+                    cup.classList.add('filled');
+                } else {
+                    cup.classList.remove('filled');
+                }
+            });
+
+            const card = document.getElementById('water-card');
+            const status = document.getElementById('water-status');
+            if (appState.water >= 5) {
+                card.classList.add('completed');
+                status.textContent = '✅';
+            } else {
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            }
+        }
+
+        // 更新睡眠UI
+        function updateSleepUI() {
+            const sleepBtn = document.getElementById('sleep-btn');
+            const wakeupBtn = document.getElementById('wakeup-btn');
+            const sleepInfo = document.getElementById('sleep-info');
+            const card = document.getElementById('sleep-card');
+            const status = document.getElementById('sleep-status');
+
+            if (appState.sleep.bedTime && !appState.sleep.wakeTime) {
+                sleepBtn.disabled = true;
+                wakeupBtn.disabled = false;
+                const bedTime = new Date(appState.sleep.bedTime);
+                const hour = bedTime.getHours();
+                const minute = bedTime.getMinutes();
+                sleepInfo.textContent = `已于 ${hour}:${String(minute).padStart(2, '0')} 准备睡觉`;
+
+                if (!appState.sleep.onTime) {
+                    sleepInfo.textContent += ' (未按时)';
+                    sleepInfo.classList.add('warning');
+                } else {
+                    sleepInfo.classList.remove('warning');
+                }
+            } else if (appState.sleep.wakeTime) {
+                sleepBtn.disabled = false;
+                wakeupBtn.disabled = true;
+                const hours = Math.floor(appState.sleep.duration / 60);
+                const mins = appState.sleep.duration % 60;
+                sleepInfo.textContent = `睡眠时长: ${hours}小时${mins}分钟`;
+
+                if (appState.sleep.duration < 480) { // 8小时 = 480分钟
+                    sleepInfo.classList.add('warning');
+                    status.textContent = '⚠️';
+                    card.classList.remove('completed');
+                } else if (!appState.sleep.onTime) {
+                    sleepInfo.textContent += ' (未按时)';
+                    sleepInfo.classList.add('warning');
+                    status.textContent = '⚠️';
+                    card.classList.remove('completed');
+                } else {
+                    sleepInfo.classList.remove('warning');
+                    status.textContent = '✅';
+                    card.classList.add('completed');
+                }
+            } else {
+                sleepBtn.disabled = false;
+                wakeupBtn.disabled = true;
+                sleepInfo.textContent = '';
+                status.textContent = '⚪';
+                card.classList.remove('completed');
+            }
+        }
+
+        // 更新计时器UI
+        function updateTimerUI(taskName, taskData) {
+            const startBtn = document.getElementById(`${taskName}-start`);
+            const finishBtn = document.getElementById(`${taskName}-finish`);
+            const cancelContainer = document.getElementById(`${taskName}-cancel-container`);
+            const card = document.getElementById(`${taskName}-card`);
+            const status = document.getElementById(`${taskName}-status`);
+
+            if (taskData.completed) {
+                startBtn.disabled = true;
+                finishBtn.disabled = true;
+                cancelContainer.style.display = 'none';
+                card.classList.add('completed');
+                status.textContent = '✅';
+            } else if (taskData.startTime) {
+                startBtn.disabled = true;
+                cancelContainer.style.display = 'flex';
+                const minRequired = taskName === 'footbath' ? 20 : 60;
+                finishBtn.disabled = taskData.duration < minRequired;
+            } else {
+                startBtn.disabled = false;
+                finishBtn.disabled = true;
+                cancelContainer.style.display = 'none';
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            }
+        }
+
+        // 更新三餐UI
+        function updateMealsUI() {
+            const meals = ['breakfast', 'lunch', 'dinner'];
+            let allCompleted = true;
+
+            meals.forEach(meal => {
+                const mealData = appState.meals[meal];
+                const checkTag = document.getElementById(`${meal}-check`);
+                const proteinTag = document.getElementById(`${meal}-protein`);
+                const grainTag = document.getElementById(`${meal}-grain`);
+
+                // 更新打卡标签
+                if (mealData.checked) {
+                    const mealTime = new Date(mealData.time);
+                    const hour = mealTime.getHours();
+                    const minute = mealTime.getMinutes();
+
+                    let inWindow = false;
+                    if (meal === 'breakfast' && ((hour === 6 && minute >= 0) || (hour > 6 && hour < 9) || (hour === 9 && minute <= 30))) {
+                        inWindow = true;
+                    } else if (meal === 'lunch' && ((hour === 11) || (hour === 12) || (hour === 13 && minute <= 30))) {
+                        inWindow = true;
+                    } else if (meal === 'dinner' && ((hour === 17) || (hour === 18) || (hour === 19) || (hour === 20 && minute === 0))) {
+                        inWindow = true;
+                    }
+
+                    checkTag.classList.remove('unchecked', 'window-in', 'window-out');
+                    checkTag.classList.add(inWindow ? 'window-in' : 'window-out');
+                } else {
+                    checkTag.classList.remove('window-in', 'window-out');
+                    checkTag.classList.add('unchecked');
+                    allCompleted = false;
+                }
+
+                // 更新蛋白质标签
+                if (mealData.protein) {
+                    proteinTag.classList.add('checked');
+                } else {
+                    proteinTag.classList.remove('checked');
+                }
+
+                // 更新粗粮标签
+                if (mealData.grain) {
+                    grainTag.classList.add('checked');
+                } else {
+                    grainTag.classList.remove('checked');
+                }
+            });
+
+            const card = document.getElementById('meals-card');
+            const status = document.getElementById('meals-status');
+            if (allCompleted) {
+                card.classList.add('completed');
+                status.textContent = '✅';
+            } else {
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            }
+        }
+
+        // 更新19:30后禁食UI
+        function updateNoEatingUI() {
+            const btn = document.getElementById('no-eating-btn');
+            const card = document.getElementById('no-eating-card');
+            const status = document.getElementById('no-eating-status');
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+
+            // 检查是否已经过了19:30
+            const canCheckIn = (hour > 19) || (hour === 19 && minute >= 30);
+
+            if (appState.noEating.completed) {
+                btn.disabled = true;
+                card.classList.add('completed');
+                status.textContent = '✅';
+                btn.textContent = '已确认：今天19:30后没有进食';
+            } else if (canCheckIn) {
+                btn.disabled = false;
+                btn.textContent = '今天19:30后没有进食';
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            } else {
+                btn.disabled = true;
+                btn.textContent = '19:30后可打卡';
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            }
+        }
+
+        // 更新每周任务UI
+        function updateWeeklyTaskUI(taskName, taskData) {
+            const countEl = document.getElementById(`${taskName}-count`);
+            const card = document.getElementById(`${taskName}-card`);
+            const status = document.getElementById(`${taskName}-status`);
+            const startBtn = document.getElementById(`${taskName}-start`);
+            const finishBtn = document.getElementById(`${taskName}-finish`);
+            const cancelContainer = document.getElementById(`${taskName}-cancel-container`);
+
+            countEl.textContent = `${taskData.weekCount}/2`;
+
+            if (taskData.weekCount >= 2) {
+                card.classList.add('completed');
+                status.textContent = '✅';
+            } else {
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+            }
+
+            if (taskData.todayCompleted) {
+                startBtn.disabled = true;
+                finishBtn.disabled = true;
+                cancelContainer.style.display = 'none';
+            } else if (taskData.startTime) {
+                startBtn.disabled = true;
+                cancelContainer.style.display = 'flex';
+                const minRequired = taskName === 'exercise' ? 40 : 20;
+                finishBtn.disabled = taskData.duration < minRequired;
+            } else {
+                startBtn.disabled = false;
+                finishBtn.disabled = true;
+                cancelContainer.style.display = 'none';
+            }
+        }
+
+        // 更新所有计时器
+        function updateAllTimers() {
+            // 更新泡脚计时器
+            if (appState.footbath.startTime && !appState.footbath.completed) {
+                const elapsed = Math.floor((Date.now() - appState.footbath.startTime) / 1000);
+                appState.footbath.duration = Math.floor(elapsed / 60);
+                document.getElementById('footbath-timer').textContent = formatTime(elapsed);
+                if (appState.footbath.duration >= 20) {
+                    document.getElementById('footbath-finish').disabled = false;
+                }
+            }
+
+            // 更新快走计时器
+            if (appState.walk.startTime && !appState.walk.completed) {
+                const elapsed = Math.floor((Date.now() - appState.walk.startTime) / 1000);
+                appState.walk.duration = Math.floor(elapsed / 60);
+                document.getElementById('walk-timer').textContent = formatTime(elapsed);
+                if (appState.walk.duration >= 60) {
+                    document.getElementById('walk-finish').disabled = false;
+                }
+            }
+
+            // 更新运动计时器
+            if (appState.exercise.startTime && !appState.exercise.todayCompleted) {
+                const elapsed = Math.floor((Date.now() - appState.exercise.startTime) / 1000);
+                appState.exercise.duration = Math.floor(elapsed / 60);
+                document.getElementById('exercise-timer').textContent = formatTime(elapsed);
+                if (appState.exercise.duration >= 40) {
+                    document.getElementById('exercise-finish').disabled = false;
+                }
+            }
+
+            // 更新晨跑计时器
+            if (appState.morningRun.startTime && !appState.morningRun.todayCompleted) {
+                const elapsed = Math.floor((Date.now() - appState.morningRun.startTime) / 1000);
+                appState.morningRun.duration = Math.floor(elapsed / 60);
+                document.getElementById('morning-run-timer').textContent = formatTime(elapsed);
+                if (appState.morningRun.duration >= 20) {
+                    document.getElementById('morning-run-finish').disabled = false;
+                }
+            }
+        }
+
+        // 格式化时间（MM:SS格式）
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // 绑定事件 - 添加触摸事件支持
+        function addClickHandler(element, handler) {
+            if (!element) return;
+
+            // 使用 click 事件即可,现代浏览器会自动处理触摸
+            element.addEventListener('click', handler);
+
+            // 为了更好的触摸体验,添加 touchstart 处理
+            element.addEventListener('touchstart', (e) => {
+                element.style.opacity = '0.7';
+            }, { passive: true });
+
+            element.addEventListener('touchend', (e) => {
+                element.style.opacity = '1';
+            }, { passive: true });
+
+            element.addEventListener('touchcancel', (e) => {
+                element.style.opacity = '1';
+            }, { passive: true });
+        }
+
+        function bindEvents() {
+            // 喝水
+            document.querySelectorAll('.water-cup').forEach(cup => {
+                addClickHandler(cup, () => {
+                    const cupNum = parseInt(cup.dataset.cup);
+                    if (appState.water < cupNum) {
+                        appState.water = cupNum;
+                    } else {
+                        appState.water = cupNum - 1;
+                    }
+                    updateWaterUI();
+                    saveData();
+                    if (appState.water === 5) {
+                        showCelebration();
+                    }
+                });
+            });
+
+            // 睡眠
+            addClickHandler(document.getElementById('sleep-btn'), () => {
+                const now = new Date();
+                const hour = now.getHours();
+                const minute = now.getMinutes();
+
+                appState.sleep.bedTime = now.getTime();
+
+                // 判断是否按时（23:05之前）
+                if (hour < 23 || (hour === 23 && minute <= 5)) {
+                    appState.sleep.onTime = true;
+                } else {
+                    appState.sleep.onTime = false;
+                }
+
+                updateSleepUI();
+                saveData();
+                showCelebration();
+            });
+
+            addClickHandler(document.getElementById('wakeup-btn'), () => {
+                const now = new Date();
+                const hour = now.getHours();
+                if (hour >= 6 && hour < 12) {
+                    appState.sleep.wakeTime = now.getTime();
+                    appState.sleep.duration = Math.floor((appState.sleep.wakeTime - appState.sleep.bedTime) / 60000);
+                    updateSleepUI();
+                    saveData();
+                    updateUI();
+                    showCelebration();
+                } else {
+                    alert('请在6:00-12:00之间打卡起床哦！');
+                }
+            });
+
+            // 泡脚
+            addClickHandler(document.getElementById('footbath-start'), () => {
+                appState.footbath.startTime = Date.now();
+                updateTimerUI('footbath', appState.footbath);
+                saveData();
+            });
+
+            addClickHandler(document.getElementById('footbath-finish'), () => {
+                if (appState.footbath.duration >= 20) {
+                    appState.footbath.completed = true;
+                    updateTimerUI('footbath', appState.footbath);
+                    saveData();
+                    updateUI();
+                    showCelebration();
+                }
+            });
+
+            addClickHandler(document.getElementById('footbath-cancel'), () => {
+                appState.footbath.startTime = null;
+                appState.footbath.duration = 0;
+                document.getElementById('footbath-timer').textContent = '00:00';
+                updateTimerUI('footbath', appState.footbath);
+                saveData();
+            });
+
+            // 快走
+            addClickHandler(document.getElementById('walk-start'), () => {
+                appState.walk.startTime = Date.now();
+                updateTimerUI('walk', appState.walk);
+                saveData();
+            });
+
+            addClickHandler(document.getElementById('walk-finish'), () => {
+                if (appState.walk.duration >= 60) {
+                    appState.walk.completed = true;
+                    updateTimerUI('walk', appState.walk);
+                    saveData();
+                    updateUI();
+                    showCelebration();
+                }
+            });
+
+            addClickHandler(document.getElementById('walk-cancel'), () => {
+                appState.walk.startTime = null;
+                appState.walk.duration = 0;
+                document.getElementById('walk-timer').textContent = '00:00';
+                updateTimerUI('walk', appState.walk);
+                saveData();
+            });
+
+            // 三餐标签点击事件
+            ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+                const checkTag = document.getElementById(`${meal}-check`);
+                const proteinTag = document.getElementById(`${meal}-protein`);
+                const grainTag = document.getElementById(`${meal}-grain`);
+
+                // 打卡标签点击
+                addClickHandler(checkTag, () => {
+                    if (!appState.meals[meal].checked) {
+                        appState.meals[meal].checked = true;
+                        appState.meals[meal].time = Date.now();
+                        updateMealsUI();
+                        saveData();
+                        updateUI();
+
+                        if (appState.meals.breakfast.checked && appState.meals.lunch.checked && appState.meals.dinner.checked) {
+                            showCelebration();
+                        }
+                    }
+                });
+
+                // 蛋白质标签点击
+                addClickHandler(proteinTag, () => {
+                    appState.meals[meal].protein = !appState.meals[meal].protein;
+                    updateMealsUI();
+                    saveData();
+                });
+
+                // 粗粮标签点击
+                addClickHandler(grainTag, () => {
+                    appState.meals[meal].grain = !appState.meals[meal].grain;
+                    updateMealsUI();
+                    saveData();
+                });
+            });
+
+            // 19:30后禁食
+            addClickHandler(document.getElementById('no-eating-btn'), () => {
+                appState.noEating.completed = true;
+                updateNoEatingUI();
+                saveData();
+                updateUI();
+                showCelebration();
+            });
+
+            // 运动类型选择
+            document.querySelectorAll('.exercise-type').forEach(typeEl => {
+                addClickHandler(typeEl, () => {
+                    document.querySelectorAll('.exercise-type').forEach(el => el.classList.remove('selected'));
+                    typeEl.classList.add('selected');
+                    appState.exercise.type = typeEl.dataset.type;
+                    saveData();
+                });
+            });
+
+            // 运动
+            addClickHandler(document.getElementById('exercise-start'), () => {
+                if (!appState.exercise.type) {
+                    alert('请先选择运动类型！');
+                    return;
+                }
+                appState.exercise.startTime = Date.now();
+                updateWeeklyTaskUI('exercise', appState.exercise);
+                saveData();
+            });
+
+            addClickHandler(document.getElementById('exercise-finish'), () => {
+                if (appState.exercise.duration >= 40) {
+                    appState.exercise.todayCompleted = true;
+                    appState.exercise.weekCount++;
+                    appState.exercise.startTime = null;
+                    appState.exercise.duration = 0;
+                    document.getElementById('exercise-timer').textContent = '00:00';
+                    updateWeeklyTaskUI('exercise', appState.exercise);
+                    saveData();
+                    updateUI();
+                    showCelebration();
+                }
+            });
+
+            addClickHandler(document.getElementById('exercise-cancel'), () => {
+                appState.exercise.startTime = null;
+                appState.exercise.duration = 0;
+                document.getElementById('exercise-timer').textContent = '00:00';
+                updateWeeklyTaskUI('exercise', appState.exercise);
+                saveData();
+            });
+
+            // 晨跑
+            addClickHandler(document.getElementById('morning-run-start'), () => {
+                appState.morningRun.startTime = Date.now();
+                updateWeeklyTaskUI('morning-run', appState.morningRun);
+                saveData();
+            });
+
+            addClickHandler(document.getElementById('morning-run-finish'), () => {
+                if (appState.morningRun.duration >= 20) {
+                    appState.morningRun.todayCompleted = true;
+                    appState.morningRun.weekCount++;
+                    appState.morningRun.startTime = null;
+                    appState.morningRun.duration = 0;
+                    document.getElementById('morning-run-timer').textContent = '00:00';
+                    updateWeeklyTaskUI('morning-run', appState.morningRun);
+                    saveData();
+                    updateUI();
+                    showCelebration();
+                }
+            });
+
+            addClickHandler(document.getElementById('morning-run-cancel'), () => {
+                appState.morningRun.startTime = null;
+                appState.morningRun.duration = 0;
+                document.getElementById('morning-run-timer').textContent = '00:00';
+                updateWeeklyTaskUI('morning-run', appState.morningRun);
+                saveData();
+            });
+
+            // 日历按钮
+            addClickHandler(document.getElementById('calendar-fab'), () => {
+                showHistoryModal();
+            });
+
+            // 体重记录
+            addClickHandler(document.getElementById('weight-save-btn'), () => {
+                saveWeight();
+            });
+
+            // 体重输入框实时预览 BMI
+            document.getElementById('weight-input').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                const bmiDisplay = document.getElementById('bmi-display');
+                if (val && val >= 20 && val <= 300) {
+                    const bmi = calculateBMI(val);
+                    const cat = getBMICategory(bmi);
+                    bmiDisplay.textContent = `BMI: ${bmi} (${cat.label})`;
+                    bmiDisplay.className = 'bmi-display show ' + cat.cls;
+                } else {
+                    bmiDisplay.className = 'bmi-display';
+                    bmiDisplay.textContent = '';
+                }
+            });
+
+            // Dashboard
+            addClickHandler(document.getElementById('dashboard-fab'), () => {
+                openDashboard();
+            });
+
+            addClickHandler(document.getElementById('dashboard-close'), () => {
+                closeDashboard();
+            });
+
+            addClickHandler(document.getElementById('dashboard-modal'), (e) => {
+                if (e.target.id === 'dashboard-modal') {
+                    closeDashboard();
+                }
+            });
+
+            addClickHandler(document.getElementById('range-7'), () => {
+                dashboardRange = 7;
+                document.getElementById('range-7').classList.add('active');
+                document.getElementById('range-30').classList.remove('active');
+                renderDashboard();
+            });
+
+            addClickHandler(document.getElementById('range-30'), () => {
+                dashboardRange = 30;
+                document.getElementById('range-30').classList.add('active');
+                document.getElementById('range-7').classList.remove('active');
+                renderDashboard();
+            });
+
+            // 庆祝弹窗点击关闭
+            addClickHandler(document.getElementById('celebration-modal'), () => {
+                document.getElementById('celebration-modal').style.display = 'none';
+            });
+
+            // 历史记录模态框关闭
+            addClickHandler(document.getElementById('history-close'), () => {
+                document.getElementById('history-modal').style.display = 'none';
+            });
+
+            addClickHandler(document.getElementById('history-modal'), (e) => {
+                if (e.target.id === 'history-modal') {
+                    document.getElementById('history-modal').style.display = 'none';
+                }
+            });
+        }
+
+        // 显示历史记录模态框
+        function showHistoryModal() {
+            const dateStr = prompt('请输入要查看的日期（格式：YYYY-MM-DD），例如：2026-04-20');
+
+            if (!dateStr) return;
+
+            try {
+                const dateObj = new Date(dateStr);
+                const formattedDate = dateObj.toDateString();
+
+                document.getElementById('history-date').textContent = `${dateStr} 的记录`;
+
+                const historyList = document.getElementById('history-list');
+                historyList.innerHTML = '';
+
+                if (appState.history[formattedDate]) {
+                    const tasks = appState.history[formattedDate];
+                    const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
+
+                    tasks.forEach((completed, index) => {
+                        if (index >= taskNames.length) return;
+                        const li = document.createElement('li');
+                        li.className = 'history-item';
+                        li.innerHTML = `
+                            <span class="history-item-name">${taskNames[index]}</span>
+                            <span class="history-item-status">${completed ? '✅' : '❌'}</span>
+                        `;
+                        historyList.appendChild(li);
+                    });
+                } else if (formattedDate === appState.today) {
+                    // 显示今天的数据
+                    const tasks = getCompletionStatus();
+                    const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
+
+                    tasks.forEach((completed, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'history-item';
+                        li.innerHTML = `
+                            <span class="history-item-name">${taskNames[index]}</span>
+                            <span class="history-item-status">${completed ? '✅' : '⚪'}</span>
+                        `;
+                        historyList.appendChild(li);
+                    });
+                } else {
+                    historyList.innerHTML = '<div class="no-data">暂无记录</div>';
+                }
+
+                document.getElementById('history-modal').style.display = 'flex';
+            } catch (error) {
+                alert('日期格式不正确，请使用 YYYY-MM-DD 格式，例如：2026-04-20');
+            }
+        }
+
+        // 显示庆祝动画
+        function showCelebration() {
+            const status = getCompletionStatus();
+            const todayCompleted = status.filter(t => t).length;
+
+            let encouragement;
+            let confettiCount = 50;
+
+            // 检查是否全部完成
+            if (todayCompleted === 9) {
+                encouragement = {
+                    emoji: '🎊',
+                    text: allCompleteMessages[Math.floor(Math.random() * allCompleteMessages.length)],
+                    subtext: ''
+                };
+                confettiCount = 100; // 更多彩纸
+            } else {
+                encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+            }
+
+            document.getElementById('celebration-emoji').textContent = encouragement.emoji;
+            document.getElementById('celebration-text').textContent = encouragement.text;
+            document.getElementById('celebration-subtext').textContent = encouragement.subtext;
+
+            const modal = document.getElementById('celebration-modal');
+            modal.style.display = 'flex';
+
+            // 彩纸效果
+            createConfetti(confettiCount);
+
+            // 自动关闭
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 2500);
+        }
+
+        // 创建彩纸效果
+        function createConfetti(count = 50) {
+            const colors = ['#667eea', '#764ba2', '#84fab0', '#8fd3f4', '#ffecd2', '#fcb69f'];
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * window.innerWidth + 'px';
+                    confetti.style.top = '-10px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    document.body.appendChild(confetti);
+
+                    const duration = 2000 + Math.random() * 1000;
+                    const endX = (Math.random() - 0.5) * 200;
+
+                    confetti.animate([
+                        { transform: `translateY(0) translateX(0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translateY(${window.innerHeight}px) translateX(${endX}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+                    ], {
+                        duration: duration,
+                        easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                    });
+
+                    setTimeout(() => confetti.remove(), duration);
+                }, i * 30);
+            }
+        }
+
+        // ===== 云同步模块 =====
+        const JSONBLOB_API = 'https://jsonblob.com/api/jsonBlob';
+        let syncDebounceTimer = null;
+        const SYNC_DEBOUNCE_MS = 5000; // 最多每5秒同步一次
+        let isSyncing = false;
+        let lastSyncTime = null;
+
+        // 获取当前用户的 blob ID
+        function getBlobId() {
+            if (!currentUser) return null;
+            return localStorage.getItem(`healthTracker_blobId_${currentUser}`);
+        }
+
+        // 存储 blob ID
+        function setBlobId(blobId) {
+            if (!currentUser) return;
+            localStorage.setItem(`healthTracker_blobId_${currentUser}`, blobId);
+        }
+
+        // 更新同步状态 UI
+        function updateSyncUI(status, message) {
+            const icon = document.getElementById('sync-icon');
+            const timeEl = document.getElementById('sync-time');
+            const btn = document.getElementById('sync-btn');
+
+            if (!icon) return;
+
+            switch (status) {
+                case 'syncing':
+                    icon.textContent = '⬆️';
+                    icon.classList.add('spinning');
+                    btn.classList.add('spinning');
+                    break;
+                case 'synced':
+                    icon.textContent = '✅';
+                    icon.classList.remove('spinning');
+                    btn.classList.remove('spinning');
+                    lastSyncTime = new Date();
+                    timeEl.textContent = formatSyncTime(lastSyncTime);
+                    break;
+                case 'offline':
+                    icon.textContent = '❌';
+                    icon.classList.remove('spinning');
+                    btn.classList.remove('spinning');
+                    timeEl.textContent = '离线';
+                    break;
+                case 'error':
+                    icon.textContent = '⚠️';
+                    icon.classList.remove('spinning');
+                    btn.classList.remove('spinning');
+                    break;
+            }
+        }
+
+        // 格式化同步时间
+        function formatSyncTime(date) {
+            if (!date) return '';
+            const h = String(date.getHours()).padStart(2, '0');
+            const m = String(date.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        // 创建新的 blob
+        async function createBlob(data) {
+            try {
+                const resp = await fetch(JSONBLOB_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                // jsonblob returns Location header with full URL
+                const location = resp.headers.get('Location');
+                if (location) {
+                    const blobId = location.split('/').pop();
+                    return blobId;
+                }
+                // Fallback: try to extract from response
+                const result = await resp.json();
+                return null;
+            } catch (e) {
+                console.warn('Cloud: create blob failed', e);
+                return null;
+            }
+        }
+
+        // 从云端获取数据
+        async function fetchFromCloud() {
+            const blobId = getBlobId();
+            if (!blobId) return null;
+            try {
+                const resp = await fetch(`${JSONBLOB_API}/${blobId}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!resp.ok) {
+                    if (resp.status === 404) {
+                        // Blob was deleted, clear stored ID
+                        localStorage.removeItem(`healthTracker_blobId_${currentUser}`);
+                    }
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                return await resp.json();
+            } catch (e) {
+                console.warn('Cloud: fetch failed', e);
+                return null;
+            }
+        }
+
+        // 上传数据到云端
+        async function pushToCloud(data) {
+            let blobId = getBlobId();
+            try {
+                if (!blobId) {
+                    // 首次使用，创建 blob
+                    blobId = await createBlob(data);
+                    if (blobId) {
+                        setBlobId(blobId);
+                        return true;
+                    }
+                    return false;
+                }
+                // 更新现有 blob
+                const resp = await fetch(`${JSONBLOB_API}/${blobId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!resp.ok) {
+                    if (resp.status === 404) {
+                        // Blob gone, re-create
+                        localStorage.removeItem(`healthTracker_blobId_${currentUser}`);
+                        const newId = await createBlob(data);
+                        if (newId) {
+                            setBlobId(newId);
+                            return true;
+                        }
+                    }
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                return true;
+            } catch (e) {
+                console.warn('Cloud: push failed', e);
+                return false;
+            }
+        }
+
+        // 防抖同步到云端
+        function syncToCloud() {
+            if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+            syncDebounceTimer = setTimeout(async () => {
+                if (isSyncing || !currentUser) return;
+                isSyncing = true;
+                updateSyncUI('syncing');
+                const dataToSync = { ...appState, lastModified: Date.now() };
+                const ok = await pushToCloud(dataToSync);
+                isSyncing = false;
+                if (ok) {
+                    updateSyncUI('synced');
+                } else {
+                    if (!navigator.onLine) {
+                        updateSyncUI('offline');
+                    } else {
+                        updateSyncUI('error');
+                    }
+                }
+            }, SYNC_DEBOUNCE_MS);
+        }
+
+        // 从云端同步（页面加载时调用）
+        async function syncFromCloud() {
+            if (!currentUser) return;
+            updateSyncUI('syncing');
+            try {
+                const cloudData = await fetchFromCloud();
+                if (cloudData && cloudData.lastModified) {
+                    const localModified = appState.lastModified || 0;
+                    if (cloudData.lastModified > localModified) {
+                        // 云端数据更新，使用云端
+                        const preserveBlobId = getBlobId();
+                        appState = cloudData;
+                        saveDataLocal(); // 只存 localStorage，不触发云同步
+                        updateUI();
+                    }
+                }
+                updateSyncUI('synced');
+            } catch (e) {
+                console.warn('Cloud: sync from cloud failed', e);
+                if (!navigator.onLine) {
+                    updateSyncUI('offline');
+                } else {
+                    updateSyncUI('error');
+                }
+            }
+        }
+
+        // 仅保存到 localStorage（不触发云同步）
+        function saveDataLocal() {
+            if (!currentUser) return;
+            localStorage.setItem(getStorageKey(), JSON.stringify(appState));
+        }
+
+        // 手动同步按钮
+        async function manualSync() {
+            if (isSyncing || !currentUser) return;
+            // 先推送本地数据
+            isSyncing = true;
+            updateSyncUI('syncing');
+            appState.lastModified = Date.now();
+            saveDataLocal();
+            const ok = await pushToCloud(appState);
+            isSyncing = false;
+            if (ok) {
+                updateSyncUI('synced');
+            } else {
+                if (!navigator.onLine) {
+                    updateSyncUI('offline');
+                } else {
+                    updateSyncUI('error');
+                }
+            }
+        }
+
+        // 网络状态监听：恢复在线时自动同步
+        window.addEventListener('online', () => {
+            if (currentUser) {
+                syncToCloud();
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            updateSyncUI('offline');
+        });
+
+        // 定期更新同步时间显示
+        setInterval(() => {
+            if (lastSyncTime) {
+                document.getElementById('sync-time').textContent = formatSyncTime(lastSyncTime);
+            }
+        }, 60000);
+
+        // ===== 体重 & BMI 功能 =====
+        function calculateBMI(weight) {
+            if (!currentUser || !weight) return null;
+            const heightM = USERS[currentUser].height / 100;
+            const bmi = weight / (heightM * heightM);
+            return Math.round(bmi * 10) / 10;
+        }
+
+        function getBMICategory(bmi) {
+            if (bmi < 18.5) return { label: '偏瘦', cls: 'bmi-thin' };
+            if (bmi < 24) return { label: '正常', cls: 'bmi-normal' };
+            if (bmi < 28) return { label: '偏胖', cls: 'bmi-overweight' };
+            return { label: '肥胖', cls: 'bmi-obese' };
+        }
+
+        function updateWeightUI() {
+            const card = document.getElementById('weight-card');
+            const status = document.getElementById('weight-status');
+            const input = document.getElementById('weight-input');
+            const bmiDisplay = document.getElementById('bmi-display');
+            const saveBtn = document.getElementById('weight-save-btn');
+
+            if (appState.weight && appState.weight.value !== null) {
+                card.classList.add('completed');
+                status.textContent = '✅';
+                input.value = appState.weight.value;
+                saveBtn.textContent = '已记录';
+                saveBtn.classList.add('recorded');
+
+                const cat = getBMICategory(appState.weight.bmi);
+                bmiDisplay.textContent = `BMI: ${appState.weight.bmi} (${cat.label})`;
+                bmiDisplay.className = 'bmi-display show ' + cat.cls;
+            } else {
+                card.classList.remove('completed');
+                status.textContent = '⚪';
+                saveBtn.textContent = '记录';
+                saveBtn.classList.remove('recorded');
+                bmiDisplay.className = 'bmi-display';
+                bmiDisplay.textContent = '';
+            }
+        }
+
+        function saveWeight() {
+            const input = document.getElementById('weight-input');
+            const val = parseFloat(input.value);
+            if (!val || val < 20 || val > 300) {
+                alert('请输入有效的体重 (20-300 kg)');
+                return;
+            }
+            const bmi = calculateBMI(val);
+            const cat = getBMICategory(bmi);
+            appState.weight = {
+                value: val,
+                bmi: bmi,
+                category: cat.label,
+                time: Date.now()
+            };
+            saveData();
+            updateWeightUI();
+            updateUI();
+            showCelebration();
+        }
+
+        // ===== Dashboard 功能 =====
+        let dashboardRange = 7;
+
+        function openDashboard() {
+            const modal = document.getElementById('dashboard-modal');
+            modal.classList.add('open');
+            modal.style.display = 'block';
+            renderDashboard();
+        }
+
+        function closeDashboard() {
+            const modal = document.getElementById('dashboard-modal');
+            modal.classList.remove('open');
+            modal.style.display = 'none';
+        }
+
+        function getDashboardData(days) {
+            const result = [];
+            const today = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toDateString();
+                const dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
+
+                let entry = { date: dateLabel, dateStr: dateStr };
+
+                if (dateStr === appState.today) {
+                    // Today's live data
+                    const status = getCompletionStatus();
+                    const completed = status.filter(t => t).length;
+                    entry.water = appState.water || 0;
+                    entry.sleepDuration = appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null;
+                    entry.weight = appState.weight && appState.weight.value ? appState.weight.value : null;
+                    entry.bmi = appState.weight && appState.weight.bmi ? appState.weight.bmi : null;
+                    entry.completed = completed;
+                    entry.total = 9;
+                    entry.streak = appState.streak;
+                } else if (appState.history[dateStr]) {
+                    const hist = appState.history[dateStr];
+                    // History can be an array (old format) or an object (new format with details)
+                    if (Array.isArray(hist)) {
+                        const completed = hist.filter(t => t).length;
+                        entry.water = null;
+                        entry.sleepDuration = null;
+                        entry.weight = null;
+                        entry.bmi = null;
+                        entry.completed = completed;
+                        entry.total = hist.length;
+                        entry.streak = null;
+                    } else {
+                        entry.water = hist.water != null ? hist.water : null;
+                        entry.sleepDuration = hist.sleepDuration != null ? hist.sleepDuration : null;
+                        entry.weight = hist.weight != null ? hist.weight : null;
+                        entry.bmi = hist.bmi != null ? hist.bmi : null;
+                        entry.completed = hist.completed != null ? hist.completed : null;
+                        entry.total = hist.total != null ? hist.total : 9;
+                        entry.streak = hist.streak != null ? hist.streak : null;
+                    }
+                } else {
+                    entry.water = null;
+                    entry.sleepDuration = null;
+                    entry.weight = null;
+                    entry.bmi = null;
+                    entry.completed = null;
+                    entry.total = 9;
+                    entry.streak = null;
+                }
+                result.push(entry);
+            }
+            return result;
+        }
+
+        function renderDashboard() {
+            const data = getDashboardData(dashboardRange);
+            document.getElementById('streak-big-number').textContent = appState.streak;
+
+            renderWeightBMIChart(data);
+            renderWaterChart(data);
+            renderSleepChart(data);
+            renderCompletionChart(data);
+            renderStreakChart(data);
+        }
+
+        // Chart utilities
+        function setupCanvas(canvas, width, height) {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return ctx;
+        }
+
+        function drawLineChart(canvas, data, options) {
+            const container = canvas.parentElement;
+            const w = container.clientWidth - 40;
+            const h = 200;
+            const ctx = setupCanvas(canvas, w, h);
+            const pad = { top: 25, right: options.rightAxis ? 50 : 20, bottom: 30, left: 45 };
+            const plotW = w - pad.left - pad.right;
+            const plotH = h - pad.top - pad.bottom;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Background zones for BMI
+            if (options.zones) {
+                options.zones.forEach(zone => {
+                    const y1 = pad.top + plotH - ((zone.min - options.yMin) / (options.yMax - options.yMin)) * plotH;
+                    const y2 = pad.top + plotH - ((zone.max - options.yMin) / (options.yMax - options.yMin)) * plotH;
+                    ctx.fillStyle = zone.color;
+                    ctx.fillRect(pad.left, Math.min(y1, y2), plotW, Math.abs(y2 - y1));
+                });
+            }
+
+            // Gridlines
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 0.5;
+            const ySteps = 5;
+            for (let i = 0; i <= ySteps; i++) {
+                const y = pad.top + (plotH / ySteps) * i;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(pad.left + plotW, y);
+                ctx.stroke();
+            }
+
+            // Y-axis labels (left)
+            ctx.fillStyle = '#999';
+            ctx.font = '11px -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= ySteps; i++) {
+                const val = options.yMax - (options.yMax - options.yMin) / ySteps * i;
+                const y = pad.top + (plotH / ySteps) * i;
+                ctx.fillText(Math.round(val * 10) / 10, pad.left - 6, y + 4);
+            }
+
+            // Right axis labels
+            if (options.rightAxis) {
+                ctx.textAlign = 'left';
+                for (let i = 0; i <= ySteps; i++) {
+                    const val = options.rightAxis.yMax - (options.rightAxis.yMax - options.rightAxis.yMin) / ySteps * i;
+                    const y = pad.top + (plotH / ySteps) * i;
+                    ctx.fillText(Math.round(val * 10) / 10, pad.left + plotW + 6, y + 4);
+                }
+            }
+
+            // X-axis labels
+            ctx.textAlign = 'center';
+            const labels = options.labels;
+            const step = Math.max(1, Math.floor(labels.length / 7));
+            labels.forEach((label, i) => {
+                if (i % step === 0 || i === labels.length - 1) {
+                    const x = pad.left + (plotW / Math.max(labels.length - 1, 1)) * i;
+                    ctx.fillText(label, x, h - 8);
+                }
+            });
+
+            // Draw each dataset
+            (options.datasets || []).forEach(ds => {
+                const vals = ds.data;
+                const yMin = ds.useRightAxis ? options.rightAxis.yMin : options.yMin;
+                const yMax = ds.useRightAxis ? options.rightAxis.yMax : options.yMax;
+                const points = [];
+
+                vals.forEach((v, i) => {
+                    if (v == null) return;
+                    const x = pad.left + (plotW / Math.max(vals.length - 1, 1)) * i;
+                    const y = pad.top + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
+                    points.push({ x, y, v });
+                });
+
+                if (points.length < 2) {
+                    // Just dots
+                    points.forEach(p => {
+                        ctx.fillStyle = ds.color;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    return;
+                }
+
+                // Gradient fill
+                if (ds.fill) {
+                    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+                    grad.addColorStop(0, ds.fillColor || ds.color + '40');
+                    grad.addColorStop(1, ds.fillColor2 || ds.color + '05');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, pad.top + plotH);
+                    points.forEach(p => ctx.lineTo(p.x, p.y));
+                    ctx.lineTo(points[points.length - 1].x, pad.top + plotH);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Line
+                ctx.strokeStyle = ds.color;
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                points.forEach((p, idx) => {
+                    if (idx === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                });
+                ctx.stroke();
+
+                // Dots + values
+                points.forEach(p => {
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = ds.color;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    if (ds.showValues) {
+                        ctx.fillStyle = ds.color;
+                        ctx.font = 'bold 10px -apple-system, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(p.v, p.x, p.y - 10);
+                    }
+                });
+            });
+        }
+
+        function drawBarChart(canvas, data, options) {
+            const container = canvas.parentElement;
+            const w = container.clientWidth - 40;
+            const h = 180;
+            const ctx = setupCanvas(canvas, w, h);
+            const pad = { top: 25, right: 20, bottom: 30, left: 40 };
+            const plotW = w - pad.left - pad.right;
+            const plotH = h - pad.top - pad.bottom;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Gridlines
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 0.5;
+            const ySteps = options.yMax;
+            for (let i = 0; i <= ySteps; i++) {
+                const y = pad.top + (plotH / ySteps) * i;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(pad.left + plotW, y);
+                ctx.stroke();
+            }
+
+            // Y labels
+            ctx.fillStyle = '#999';
+            ctx.font = '11px -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= ySteps; i++) {
+                const val = options.yMax - (options.yMax / ySteps) * i;
+                const y = pad.top + (plotH / ySteps) * i;
+                ctx.fillText(Math.round(val * 10) / 10, pad.left - 6, y + 4);
+            }
+
+            // Bars
+            const n = data.length;
+            const barW = Math.min(30, (plotW / n) * 0.6);
+            const gap = (plotW - barW * n) / (n + 1);
+
+            data.forEach((item, i) => {
+                const val = item.value;
+                if (val == null) return;
+                const barH = (val / options.yMax) * plotH;
+                const x = pad.left + gap + (barW + gap) * i;
+                const y = pad.top + plotH - barH;
+                const radius = Math.min(6, barW / 2);
+
+                // Gradient bar
+                const grad = ctx.createLinearGradient(x, y, x, pad.top + plotH);
+                grad.addColorStop(0, options.color || '#667eea');
+                grad.addColorStop(1, options.color2 || '#764ba2');
+                ctx.fillStyle = grad;
+
+                // Rounded top bar
+                ctx.beginPath();
+                ctx.moveTo(x, pad.top + plotH);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.lineTo(x + barW - radius, y);
+                ctx.quadraticCurveTo(x + barW, y, x + barW, y + radius);
+                ctx.lineTo(x + barW, pad.top + plotH);
+                ctx.closePath();
+                ctx.fill();
+
+                // Value label
+                if (val > 0) {
+                    ctx.fillStyle = options.color || '#667eea';
+                    ctx.font = 'bold 10px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val, x + barW / 2, y - 6);
+                }
+
+                // X label
+                ctx.fillStyle = '#999';
+                ctx.font = '10px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                const step = Math.max(1, Math.floor(n / 7));
+                if (i % step === 0 || i === n - 1) {
+                    ctx.fillText(item.label, x + barW / 2, h - 8);
+                }
+            });
+        }
+
+        // Dashboard chart renderers
+        function renderWeightBMIChart(data) {
+            const canvas = document.getElementById('chart-weight-bmi');
+            const weights = data.map(d => d.weight);
+            const bmis = data.map(d => d.bmi);
+            const hasData = weights.some(v => v != null);
+
+            if (!hasData) {
+                const container = canvas.parentElement;
+                const w = container.clientWidth - 40;
+                const ctx = setupCanvas(canvas, w, 60);
+                ctx.fillStyle = '#999';
+                ctx.font = '14px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无体重数据', w / 2, 35);
+                return;
+            }
+
+            const validW = weights.filter(v => v != null);
+            const validB = bmis.filter(v => v != null);
+            const wMin = Math.floor(Math.min(...validW) - 2);
+            const wMax = Math.ceil(Math.max(...validW) + 2);
+            const bMin = Math.floor(Math.min(...validB) - 2);
+            const bMax = Math.ceil(Math.max(...validB) + 5);
+
+            drawLineChart(canvas, data, {
+                labels: data.map(d => d.date),
+                yMin: wMin, yMax: wMax,
+                rightAxis: { yMin: bMin, yMax: bMax },
+                zones: [
+                    { min: 18.5 / (bMax - bMin) * (wMax - wMin) + wMin, max: 24 / (bMax - bMin) * (wMax - wMin) + wMin, color: 'rgba(76, 175, 80, 0.06)' }
+                ],
+                datasets: [
+                    { data: weights, color: '#667eea', fill: true, showValues: true },
+                    { data: bmis, color: '#ff6b6b', useRightAxis: true, fill: false, showValues: true }
+                ]
+            });
+        }
+
+        function renderWaterChart(data) {
+            const canvas = document.getElementById('chart-water');
+            const barData = data.map(d => ({ value: d.water, label: d.date }));
+            drawBarChart(canvas, barData, {
+                yMax: 5,
+                color: '#4fc3f7',
+                color2: '#2196f3'
+            });
+        }
+
+        function renderSleepChart(data) {
+            const canvas = document.getElementById('chart-sleep');
+            const barData = data.map(d => ({ value: d.sleepDuration, label: d.date }));
+            const maxSleep = Math.max(10, ...barData.filter(d => d.value != null).map(d => d.value), 8);
+            drawBarChart(canvas, barData, {
+                yMax: Math.ceil(maxSleep),
+                color: '#9c27b0',
+                color2: '#7b1fa2'
+            });
+        }
+
+        function renderCompletionChart(data) {
+            const canvas = document.getElementById('chart-completion');
+            const pcts = data.map(d => d.completed != null && d.total ? Math.round(d.completed / d.total * 100) : null);
+            drawLineChart(canvas, data, {
+                labels: data.map(d => d.date),
+                yMin: 0, yMax: 100,
+                datasets: [
+                    { data: pcts, color: '#4caf50', fill: true, fillColor: 'rgba(76,175,80,0.2)', fillColor2: 'rgba(76,175,80,0.02)', showValues: true }
+                ]
+            });
+        }
+
+        function renderStreakChart(data) {
+            const canvas = document.getElementById('chart-streak');
+            const container = canvas.parentElement;
+            const w = container.clientWidth - 40;
+            const h = 60;
+            const ctx = setupCanvas(canvas, w, h);
+            ctx.clearRect(0, 0, w, h);
+
+            // Simple sparkline for streak
+            const streakVals = data.map(d => d.streak != null ? d.streak : 0);
+            const maxS = Math.max(1, ...streakVals);
+            const pad = 10;
+            const plotW = w - pad * 2;
+            const plotH = h - pad * 2;
+
+            const points = streakVals.map((v, i) => ({
+                x: pad + (plotW / Math.max(streakVals.length - 1, 1)) * i,
+                y: pad + plotH - (v / maxS) * plotH
+            }));
+
+            if (points.length > 1) {
+                // Gradient fill
+                const grad = ctx.createLinearGradient(0, pad, 0, pad + plotH);
+                grad.addColorStop(0, 'rgba(255,107,107,0.3)');
+                grad.addColorStop(1, 'rgba(255,107,107,0.02)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, pad + plotH);
+                points.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(points[points.length - 1].x, pad + plotH);
+                ctx.closePath();
+                ctx.fill();
+
+                // Line
+                ctx.strokeStyle = '#ff6b6b';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+                ctx.stroke();
+            }
+        }
+
+        // ===== 增强的历史保存（包含详细数据） =====
+        // Override checkNewDay to save richer history
+        const _originalCheckNewDay = checkNewDay;
+        checkNewDay = function() {
+            const today = new Date().toDateString();
+            if (appState.today !== today) {
+                // Save rich history for the old day
+                const completionStatus = getCompletionStatus();
+                const completed = completionStatus.filter(t => t).length;
+                appState.history[appState.today] = {
+                    tasks: completionStatus,
+                    water: appState.water || 0,
+                    sleepDuration: appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null,
+                    weight: appState.weight && appState.weight.value ? appState.weight.value : null,
+                    bmi: appState.weight && appState.weight.bmi ? appState.weight.bmi : null,
+                    completed: completed,
+                    total: completionStatus.length,
+                    streak: appState.streak
+                };
+
+                // Update streak
+                if (completed >= 5) {
+                    appState.streak++;
+                } else {
+                    appState.streak = 0;
+                }
+
+                // Reset today
+                appState.today = today;
+                appState.water = 0;
+                appState.sleep = { bedTime: null, wakeTime: null, duration: 0, onTime: true };
+                appState.footbath = { startTime: null, duration: 0, completed: false };
+                appState.walk = { startTime: null, duration: 0, completed: false };
+                appState.meals = {
+                    breakfast: { checked: false, protein: false, grain: false, time: null },
+                    lunch: { checked: false, protein: false, grain: false, time: null },
+                    dinner: { checked: false, protein: false, grain: false, time: null }
+                };
+                appState.noEating = { completed: false };
+                appState.weight = { value: null, bmi: null, category: null, time: null };
+                appState.exercise.todayCompleted = false;
+                appState.morningRun.todayCompleted = false;
+
+                if (!isSameWeek(new Date(appState.today), new Date())) {
+                    appState.exercise.weekCount = 0;
+                    appState.morningRun.weekCount = 0;
+                }
+
+                saveData();
+            }
+        };
+
+        // 启动应用
+        init();
+    </script>
+</body>
+</html>
