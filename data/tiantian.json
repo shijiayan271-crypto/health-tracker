@@ -2,10 +2,10 @@
   "today": "Mon Apr 20 2026",
   "water": 5,
   "sleep": {
-    "bedTime": null,
+    "bedTime": 1776700622829,
     "wakeTime": null,
     "duration": 0,
-    "onTime": true
+    "onTime": false
   },
   "footbath": {
     "startTime": 1776694333634,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776695840916
+  "lastModified": 1776700627832
 }
