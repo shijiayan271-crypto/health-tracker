@@ -8,7 +8,7 @@
     "onTime": true
   },
   "footbath": {
-    "startTime": null,
+    "startTime": 1776694333634,
     "duration": 0,
     "completed": false
   },
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776691984874
+  "lastModified": 1776694338635
 }
