@@ -19,26 +19,26 @@
   },
   "meals": {
     "breakfast": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": null
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776691970657
     },
     "lunch": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": null
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776691971873
     },
     "dinner": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": null
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776691973273
     }
   },
   "noEating": {
-    "completed": false
+    "completed": true
   },
   "weight": {
     "value": null,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776691968813
+  "lastModified": 1776691981892
 }
