@@ -9,8 +9,8 @@
   },
   "footbath": {
     "startTime": 1776694333634,
-    "duration": 0,
-    "completed": false
+    "duration": 25,
+    "completed": true
   },
   "walk": {
     "startTime": null,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776694338635
+  "lastModified": 1776695840916
 }
