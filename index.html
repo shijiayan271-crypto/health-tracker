@@ -2528,9 +2528,16 @@
         let isSyncing = false;
         let lastSyncTime = null;
 
-        // 获取当前用户的 blob ID
+        // 固定 blob ID（跨域名通用，不依赖 localStorage）
+        const FIXED_BLOB_IDS = {
+            tiantian: '019daaf0-34fc-7a41-abe8-ebd0e8ea576b',
+            lele: '019daaf0-5075-7be0-b7c1-538084d40256'
+        };
+
+        // 获取当前用户的 blob ID（优先用固定ID，兼容旧的localStorage）
         function getBlobId() {
             if (!currentUser) return null;
+            if (FIXED_BLOB_IDS[currentUser]) return FIXED_BLOB_IDS[currentUser];
             return localStorage.getItem(`healthTracker_blobId_${currentUser}`);
         }
 
@@ -2694,14 +2701,37 @@
             if (!currentUser) return;
             updateSyncUI('syncing');
             try {
-                const cloudData = await fetchFromCloud();
+                let cloudData = await fetchFromCloud();
+
+                // 迁移逻辑：如果固定 blob 是空/placeholder，尝试从旧的 localStorage blob ID 迁移
+                if (FIXED_BLOB_IDS[currentUser] && (!cloudData || !cloudData.lastModified)) {
+                    const oldBlobId = localStorage.getItem(`healthTracker_blobId_${currentUser}`);
+                    if (oldBlobId && oldBlobId !== FIXED_BLOB_IDS[currentUser]) {
+                        try {
+                            const oldResp = await fetch(`${JSONBLOB_API}/${oldBlobId}`, {
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            if (oldResp.ok) {
+                                const oldData = await oldResp.json();
+                                if (oldData && oldData.lastModified) {
+                                    // 找到旧数据，迁移到固定 blob
+                                    cloudData = oldData;
+                                    await pushToCloud(oldData);
+                                    console.log('Cloud: migrated data from old blob to fixed blob');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Cloud: migration from old blob failed', e);
+                        }
+                    }
+                }
+
                 if (cloudData && cloudData.lastModified) {
                     const localModified = appState.lastModified || 0;
                     if (cloudData.lastModified > localModified) {
                         // 云端数据更新，使用云端
-                        const preserveBlobId = getBlobId();
                         appState = cloudData;
-                        saveDataLocal(); // 只存 localStorage，不触发云同步
+                        saveDataLocal();
                         updateUI();
                     }
                 }
