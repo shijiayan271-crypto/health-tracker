@@ -48,7 +48,7 @@
   },
   "exercise": {
     "weekCount": 0,
-    "type": null,
+    "type": "指压板慢跑",
     "startTime": null,
     "duration": 0,
     "todayCompleted": false
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776730014860
+  "lastModified": 1776730044762
 }
