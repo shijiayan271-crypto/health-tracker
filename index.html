@@ -1827,50 +1827,71 @@
         }
 
         function sortTasks() {
-            const sections = document.querySelectorAll('.task-section');
-            if (sections.length === 0) return;
-            const allCards = [];
-            sections.forEach(section => {
-                section.querySelectorAll('.task-card').forEach(card => allCards.push(card));
-            });
+            try {
+                // 找到主容器
+                const container = document.getElementById('main-container');
+                if (!container) return;
 
-            allCards.sort((a, b) => {
-                const ac = isTaskCompleted(a.id) ? 1 : 0;
-                const bc = isTaskCompleted(b.id) ? 1 : 0;
-                if (ac !== bc) return ac - bc;
-                return (TASK_TIME_ORDER[a.id] || 12) - (TASK_TIME_ORDER[b.id] || 12);
-            });
+                // 收集所有任务卡片（可能在多个 section 里，也可能已经合并过）
+                const allCards = Array.from(container.querySelectorAll('.task-card'));
+                if (allCards.length === 0) return;
 
-            const firstSection = sections[0];
-            firstSection.querySelector('.section-title').textContent = '\uD83D\uDCCB \u4ECA\u65E5\u4EFB\u52A1';
-            allCards.forEach(card => card.remove());
-            for (let i = 1; i < sections.length; i++) sections[i].remove();
+                // 排序：未完成按时间在前，已完成沉底
+                allCards.sort((a, b) => {
+                    const ac = isTaskCompleted(a.id) ? 1 : 0;
+                    const bc = isTaskCompleted(b.id) ? 1 : 0;
+                    if (ac !== bc) return ac - bc;
+                    return (TASK_TIME_ORDER[a.id] || 12) - (TASK_TIME_ORDER[b.id] || 12);
+                });
 
-            let oldDivider = document.getElementById('completed-divider');
-            if (oldDivider) oldDivider.remove();
+                // 确保只保留一个 section
+                const sections = container.querySelectorAll('.task-section');
+                let targetSection = sections[0];
+                if (!targetSection) return;
 
-            let hasCompletedSection = false;
-            allCards.forEach(card => {
-                const completed = isTaskCompleted(card.id);
-                if (completed && !hasCompletedSection) {
-                    hasCompletedSection = true;
-                    const divider = document.createElement('div');
-                    divider.id = 'completed-divider';
-                    divider.className = 'section-title';
-                    divider.style.marginTop = '20px';
-                    divider.style.opacity = '0.7';
-                    divider.style.fontSize = '15px';
-                    const cnt = allCards.filter(c => isTaskCompleted(c.id)).length;
-                    divider.textContent = '\u2705 \u5DF2\u5B8C\u6210 (' + cnt + ')';
-                    firstSection.appendChild(divider);
+                // 更新标题
+                const title = targetSection.querySelector('.section-title');
+                if (title) title.textContent = '\uD83D\uDCCB \u4ECA\u65E5\u4EFB\u52A1';
+
+                // 移除多余 section
+                for (let i = 1; i < sections.length; i++) {
+                    // 把子 section 的卡片先拿出来（已在 allCards 里）
+                    sections[i].remove();
                 }
-                if (completed) {
-                    card.classList.add('completed-sink');
-                } else {
-                    card.classList.remove('completed-sink');
-                }
-                firstSection.appendChild(card);
-            });
+
+                // 移除旧的分隔线
+                const oldDivider = document.getElementById('completed-divider');
+                if (oldDivider) oldDivider.remove();
+
+                // 按排序顺序重新插入
+                let hasCompletedSection = false;
+                allCards.forEach(card => {
+                    // 先从 DOM 中移除（不会丢失事件监听）
+                    card.remove();
+
+                    const completed = isTaskCompleted(card.id);
+                    if (completed && !hasCompletedSection) {
+                        hasCompletedSection = true;
+                        const divider = document.createElement('div');
+                        divider.id = 'completed-divider';
+                        divider.className = 'section-title';
+                        divider.style.marginTop = '20px';
+                        divider.style.opacity = '0.7';
+                        divider.style.fontSize = '15px';
+                        const cnt = allCards.filter(c => isTaskCompleted(c.id)).length;
+                        divider.textContent = '\u2705 \u5DF2\u5B8C\u6210 (' + cnt + ')';
+                        targetSection.appendChild(divider);
+                    }
+                    if (completed) {
+                        card.classList.add('completed-sink');
+                    } else {
+                        card.classList.remove('completed-sink');
+                    }
+                    targetSection.appendChild(card);
+                });
+            } catch(e) {
+                console.error('sortTasks error:', e);
+            }
         }
 
         // 更新UI
