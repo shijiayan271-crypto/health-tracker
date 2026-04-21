@@ -14,8 +14,8 @@
   },
   "walk": {
     "startTime": 1776771918092,
-    "duration": 0,
-    "completed": false
+    "duration": 62,
+    "completed": true
   },
   "meals": {
     "breakfast": {
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776772249028
+  "lastModified": 1776775751755
 }
