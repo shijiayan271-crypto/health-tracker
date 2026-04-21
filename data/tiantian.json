@@ -38,7 +38,7 @@
     }
   },
   "noEating": {
-    "completed": false
+    "completed": true
   },
   "weight": {
     "value": 73.2,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776771615342
+  "lastModified": 1776771621709
 }
