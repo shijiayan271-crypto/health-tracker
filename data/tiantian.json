@@ -1,6 +1,6 @@
 {
   "today": "Tue Apr 21 2026",
-  "water": 2,
+  "water": 3,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776744739411
+  "lastModified": 1776750849191
 }
