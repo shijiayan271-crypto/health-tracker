@@ -119,6 +119,10 @@
             transform: scale(0.98);
         }
 
+        .task-card.completed-sink {
+            opacity: 0.65;
+        }
+
         .task-card.completed {
             background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
         }
@@ -1794,6 +1798,81 @@
             syncToCloud();
         }
 
+        // ===== 任务排序（按时间 + 完成项沉底） =====
+        const TASK_TIME_ORDER = {
+            'morning-run-card': 6,
+            'weight-card': 7,
+            'meals-card': 8,
+            'water-card': 9,
+            'walk-card': 16,
+            'exercise-card': 17,
+            'no-eating-card': 19.5,
+            'footbath-card': 21,
+            'sleep-card': 22,
+        };
+
+        function isTaskCompleted(cardId) {
+            switch (cardId) {
+                case 'water-card': return appState.water >= 5;
+                case 'sleep-card': return appState.sleep.duration >= 480 && appState.sleep.onTime;
+                case 'footbath-card': return appState.footbath.completed;
+                case 'walk-card': return appState.walk.completed;
+                case 'meals-card': return appState.meals.breakfast.checked && appState.meals.lunch.checked && appState.meals.dinner.checked;
+                case 'no-eating-card': return appState.noEating.completed;
+                case 'weight-card': return appState.weight && appState.weight.value !== null;
+                case 'exercise-card': return appState.exercise.todayCompleted;
+                case 'morning-run-card': return appState.morningRun.todayCompleted;
+                default: return false;
+            }
+        }
+
+        function sortTasks() {
+            const sections = document.querySelectorAll('.task-section');
+            if (sections.length === 0) return;
+            const allCards = [];
+            sections.forEach(section => {
+                section.querySelectorAll('.task-card').forEach(card => allCards.push(card));
+            });
+
+            allCards.sort((a, b) => {
+                const ac = isTaskCompleted(a.id) ? 1 : 0;
+                const bc = isTaskCompleted(b.id) ? 1 : 0;
+                if (ac !== bc) return ac - bc;
+                return (TASK_TIME_ORDER[a.id] || 12) - (TASK_TIME_ORDER[b.id] || 12);
+            });
+
+            const firstSection = sections[0];
+            firstSection.querySelector('.section-title').textContent = '\uD83D\uDCCB \u4ECA\u65E5\u4EFB\u52A1';
+            allCards.forEach(card => card.remove());
+            for (let i = 1; i < sections.length; i++) sections[i].remove();
+
+            let oldDivider = document.getElementById('completed-divider');
+            if (oldDivider) oldDivider.remove();
+
+            let hasCompletedSection = false;
+            allCards.forEach(card => {
+                const completed = isTaskCompleted(card.id);
+                if (completed && !hasCompletedSection) {
+                    hasCompletedSection = true;
+                    const divider = document.createElement('div');
+                    divider.id = 'completed-divider';
+                    divider.className = 'section-title';
+                    divider.style.marginTop = '20px';
+                    divider.style.opacity = '0.7';
+                    divider.style.fontSize = '15px';
+                    const cnt = allCards.filter(c => isTaskCompleted(c.id)).length;
+                    divider.textContent = '\u2705 \u5DF2\u5B8C\u6210 (' + cnt + ')';
+                    firstSection.appendChild(divider);
+                }
+                if (completed) {
+                    card.classList.add('completed-sink');
+                } else {
+                    card.classList.remove('completed-sink');
+                }
+                firstSection.appendChild(card);
+            });
+        }
+
         // 更新UI
         function updateUI() {
             // 更新统计
@@ -1835,6 +1914,9 @@
 
             // 更新晨跑
             updateWeeklyTaskUI('morning-run', appState.morningRun);
+
+            // 排序任务：未完成按时间序在前，已完成沉底
+            sortTasks();
         }
 
         // 更新喝水UI
