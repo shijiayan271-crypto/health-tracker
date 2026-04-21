@@ -1,6 +1,6 @@
 {
   "today": "Tue Apr 21 2026",
-  "water": 0,
+  "water": 1,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
@@ -43,7 +43,7 @@
   "weight": {
     "value": 73.2,
     "bmi": 28.2,
-    "category": "肥胖",
+    "category": "è¥è",
     "time": 1776734077010
   },
   "exercise": {
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776734082012
+  "lastModified": 1776737894039
 }
