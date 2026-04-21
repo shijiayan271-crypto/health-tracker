@@ -13,7 +13,7 @@
     "completed": false
   },
   "walk": {
-    "startTime": null,
+    "startTime": 1776771918092,
     "duration": 0,
     "completed": false
   },
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776771621709
+  "lastModified": 1776772249028
 }
