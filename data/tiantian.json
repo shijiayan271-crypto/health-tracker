@@ -19,10 +19,10 @@
   },
   "meals": {
     "breakfast": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": null
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776737897144
     },
     "lunch": {
       "checked": false,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776737894039
+  "lastModified": 1776737903028
 }
