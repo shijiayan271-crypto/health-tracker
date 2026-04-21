@@ -41,10 +41,10 @@
     "completed": false
   },
   "weight": {
-    "value": null,
-    "bmi": null,
-    "category": null,
-    "time": null
+    "value": 73.2,
+    "bmi": 28.2,
+    "category": "肥胖",
+    "time": 1776734077010
   },
   "exercise": {
     "weekCount": 0,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776731040382
+  "lastModified": 1776734082012
 }
