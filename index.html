@@ -1215,11 +1215,11 @@
                 <div class="stat-label">连续打卡</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="week-completion">0%</div>
-                <div class="stat-label">本周完成率</div>
+                <div class="stat-value" id="week-completion">0/4</div>
+                <div class="stat-label">每周任务</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="today-completion">0/8</div>
+                <div class="stat-value" id="today-completion">0/7</div>
                 <div class="stat-label">今日完成</div>
             </div>
         </div>
@@ -1733,19 +1733,40 @@
         }
 
         // 获取完成状态
-        function getCompletionStatus() {
-            const tasks = [
+        // 每日任务完成状态（7项，不含每周任务）
+        function getDailyCompletionStatus() {
+            return [
                 appState.water >= 5,
                 appState.sleep.duration >= 8,
                 appState.footbath.completed,
                 appState.walk.completed,
                 appState.meals.breakfast.checked && appState.meals.lunch.checked && appState.meals.dinner.checked,
                 appState.noEating.completed,
-                appState.weight && appState.weight.value !== null,
+                appState.weight && appState.weight.value !== null
+            ];
+        }
+
+        // 每周任务完成状态（运动2次 + 晨跑2次 = 4次目标）
+        function getWeeklyCompletionStatus() {
+            return {
+                exerciseDone: appState.exercise.weekCount || 0,
+                exerciseTarget: 2,
+                morningRunDone: appState.morningRun.weekCount || 0,
+                morningRunTarget: 2,
+                totalDone: (appState.exercise.weekCount || 0) + (appState.morningRun.weekCount || 0),
+                totalTarget: 4,
+                exerciseCompleted: (appState.exercise.weekCount || 0) >= 2,
+                morningRunCompleted: (appState.morningRun.weekCount || 0) >= 2
+            };
+        }
+
+        // 兼容旧代码：返回全部9项状态（用于历史记录等）
+        function getCompletionStatus() {
+            const daily = getDailyCompletionStatus();
+            return daily.concat([
                 appState.exercise.weekCount >= 2,
                 appState.morningRun.weekCount >= 2
-            ];
-            return tasks;
+            ]);
         }
 
         // 更新连续打卡
@@ -1779,12 +1800,14 @@
             document.getElementById('streak-count').textContent = appState.streak;
             updateStreakFire();
 
-            const status = getCompletionStatus();
-            const todayCompleted = status.filter(t => t).length;
-            document.getElementById('today-completion').textContent = `${todayCompleted}/9`;
+            // 每日任务统计（7项）
+            const dailyStatus = getDailyCompletionStatus();
+            const dailyCompleted = dailyStatus.filter(t => t).length;
+            document.getElementById('today-completion').textContent = `${dailyCompleted}/7`;
 
-            const weekCompletion = Math.round((todayCompleted / 9) * 100);
-            document.getElementById('week-completion').textContent = `${weekCompletion}%`;
+            // 每周任务统计（运动+晨跑，共4次目标）
+            const weeklyStatus = getWeeklyCompletionStatus();
+            document.getElementById('week-completion').textContent = `${weeklyStatus.totalDone}/4`;
 
             // 更新喝水
             updateWaterUI();
@@ -2458,14 +2481,16 @@
 
         // 显示庆祝动画
         function showCelebration() {
-            const status = getCompletionStatus();
-            const todayCompleted = status.filter(t => t).length;
+            const dailyStatus = getDailyCompletionStatus();
+            const dailyDone = dailyStatus.filter(t => t).length;
+            const weeklyStatus = getWeeklyCompletionStatus();
+            const allDone = dailyDone === 7 && weeklyStatus.exerciseCompleted && weeklyStatus.morningRunCompleted;
 
             let encouragement;
             let confettiCount = 50;
 
             // 检查是否全部完成
-            if (todayCompleted === 9) {
+            if (allDone) {
                 encouragement = {
                     emoji: '🎊',
                     text: allCompleteMessages[Math.floor(Math.random() * allCompleteMessages.length)],
@@ -2705,6 +2730,7 @@
                     if (cloudData.lastModified > localModified) {
                         // 云端数据更新，使用云端
                         appState = cloudData;
+                        checkNewDay();
                         saveDataLocal();
                         updateUI();
                     }
@@ -3261,6 +3287,8 @@
             if (appState.today !== today) {
                 // Save rich history for the old day
                 const completionStatus = getCompletionStatus();
+                const dailyStatus = getDailyCompletionStatus();
+                const dailyDone = dailyStatus.filter(t => t).length;
                 const completed = completionStatus.filter(t => t).length;
                 appState.history[appState.today] = {
                     tasks: completionStatus,
@@ -3269,12 +3297,14 @@
                     weight: appState.weight && appState.weight.value ? appState.weight.value : null,
                     bmi: appState.weight && appState.weight.bmi ? appState.weight.bmi : null,
                     completed: completed,
+                    dailyCompleted: dailyDone,
+                    dailyTotal: 7,
                     total: completionStatus.length,
                     streak: appState.streak
                 };
 
-                // Update streak
-                if (completed >= 5) {
+                // Update streak - based on daily tasks only (4/7 to maintain streak)
+                if (dailyDone >= 4) {
                     appState.streak++;
                 } else {
                     appState.streak = 0;
@@ -3302,8 +3332,23 @@
                 }
 
                 saveData();
+                updateUI();
             }
         };
+
+        // 每分钟检查是否跨天，自动进入新的一天
+        setInterval(function() {
+            if (currentUser) {
+                checkNewDay();
+            }
+        }, 60000);
+
+        // 页面变为可见时也检查（手机切回来时）
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && currentUser) {
+                checkNewDay();
+            }
+        });
 
         // 启动应用
         init();
