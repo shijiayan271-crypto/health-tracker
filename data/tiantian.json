@@ -1,54 +1,54 @@
 {
-  "today": "Mon Apr 20 2026",
-  "water": 5,
+  "today": "Tue Apr 21 2026",
+  "water": 0,
   "sleep": {
-    "bedTime": 1776700622829,
-    "wakeTime": 1776730001467,
-    "duration": 489,
-    "onTime": false
+    "bedTime": null,
+    "wakeTime": null,
+    "duration": 0,
+    "onTime": true
   },
   "footbath": {
-    "startTime": 1776694333634,
-    "duration": 25,
-    "completed": true
+    "startTime": null,
+    "duration": 0,
+    "completed": false
   },
   "walk": {
     "startTime": null,
-    "duration": 65,
-    "completed": true
+    "duration": 0,
+    "completed": false
   },
   "meals": {
     "breakfast": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776691970657
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "lunch": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776691971873
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "dinner": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776691973273
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     }
   },
   "noEating": {
-    "completed": true
+    "completed": false
   },
   "weight": {
-    "value": 74,
-    "bmi": 28.5,
-    "category": "肥胖",
-    "time": 1776700636773
+    "value": null,
+    "bmi": null,
+    "category": null,
+    "time": null
   },
   "exercise": {
     "weekCount": 0,
-    "type": "指压板慢跑",
+    "type": null,
     "startTime": null,
     "duration": 0,
     "todayCompleted": false
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776730998566
+  "lastModified": 1776731040382
 }
