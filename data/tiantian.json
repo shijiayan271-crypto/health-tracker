@@ -31,10 +31,10 @@
       "time": 1776744733667
     },
     "dinner": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": null
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776771605977
     }
   },
   "noEating": {
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776771121562
+  "lastModified": 1776771615342
 }
