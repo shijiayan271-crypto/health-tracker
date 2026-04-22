@@ -544,35 +544,12 @@
             color: #333;
         }
 
-        .history-date-picker {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 0;
-            margin-bottom: 8px;
-        }
-
-        .history-date-picker label {
-            font-size: 15px;
-            color: #555;
-            white-space: nowrap;
-        }
-
-        .history-date-picker input[type="date"] {
-            flex: 1;
-            padding: 10px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            color: #333;
-            background: #f9f9ff;
-            outline: none;
-            transition: border-color 0.2s;
-            -webkit-appearance: none;
-        }
-
-        .history-date-picker input[type="date"]:focus {
-            border-color: #667eea;
+        .history-view .card button,
+        .history-view .card .cup,
+        .history-view .card input,
+        .history-view .meal-btn {
+            pointer-events: none;
+            opacity: 0.6;
         }
 
         .history-list {
@@ -1529,19 +1506,8 @@
         </div>
     </div>
 
-    <div class="modal" id="history-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title" id="history-date">历史记录</div>
-                <div class="modal-close" id="history-close">×</div>
-            </div>
-            <div class="history-date-picker">
-                <label for="history-date-input">选择日期：</label>
-                <input type="date" id="history-date-input" />
-            </div>
-            <ul class="history-list" id="history-list"></ul>
-        </div>
-    </div>
+    <!-- 隐藏的日期选择器，点日历按钮时触发 -->
+    <input type="date" id="history-date-input" style="position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;" />
 
     <script>
         // 数据结构
@@ -1789,9 +1755,15 @@
             }
         }
 
+        // 历史查看模式状态
+        let _todayBackup = null;
+        let _viewingHistory = false;
+
         // 保存数据
         function saveData() {
             if (!currentUser) return;
+            // 历史查看模式下不保存，防止覆盖今天数据
+            if (_viewingHistory) return;
             appState.lastModified = Date.now();
             localStorage.setItem(getStorageKey(), JSON.stringify(appState));
             // 触发云同步（防抖）
@@ -2513,22 +2485,11 @@
                 document.getElementById('celebration-modal').style.display = 'none';
             });
 
-            // 历史记录模态框关闭
-            addClickHandler(document.getElementById('history-close'), () => {
-                document.getElementById('history-modal').style.display = 'none';
-            });
-
-            addClickHandler(document.getElementById('history-modal'), (e) => {
-                if (e.target.id === 'history-modal') {
-                    document.getElementById('history-modal').style.display = 'none';
-                }
-            });
         }
 
-        // 显示历史记录模态框
+        // 点击日历按钮：直接弹出系统日期选择器
         function showHistoryModal() {
             const dateInput = document.getElementById('history-date-input');
-            // 默认选中今天
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -2536,18 +2497,24 @@
             dateInput.value = `${yyyy}-${mm}-${dd}`;
             dateInput.max = `${yyyy}-${mm}-${dd}`;
 
-            // 先显示弹窗，再加载今天的数据
-            document.getElementById('history-modal').style.display = 'flex';
-            loadHistoryForDate(dateInput.value);
-
-            // 监听日期变化
+            // 监听日期变化 — 选完后加载到主页
             dateInput.onchange = function() {
-                loadHistoryForDate(this.value);
+                switchToDate(this.value);
             };
+
+            // 强制弹出日期选择器
+            dateInput.style.pointerEvents = 'auto';
+            dateInput.focus();
+            dateInput.click();
+            if (typeof dateInput.showPicker === 'function') {
+                try { dateInput.showPicker(); } catch(e) {}
+            }
+            // 延迟恢复隐藏
+            setTimeout(() => { dateInput.style.pointerEvents = 'none'; }, 500);
         }
 
-        // 根据日期加载历史记录
-        function loadHistoryForDate(dateStr) {
+        // 切换主页面到指定日期的数据
+        function switchToDate(dateStr) {
             if (!dateStr) return;
 
             const parts = dateStr.split('-');
@@ -2557,43 +2524,88 @@
             const dateObj = new Date(year, month, day);
             const formattedDate = dateObj.toDateString();
 
-            const displayDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            document.getElementById('history-date').textContent = `${displayDate} 的记录`;
+            // 如果选的是今天，切回今天的实时数据
+            if (formattedDate === appState.today || formattedDate === new Date().toDateString()) {
+                if (_todayBackup) {
+                    Object.assign(appState, _todayBackup);
+                    _todayBackup = null;
+                }
+                _viewingHistory = false;
+                // 移除历史模式标记
+                document.querySelector('.container').classList.remove('history-view');
+                const banner = document.getElementById('history-banner');
+                if (banner) banner.remove();
+                updateUI();
+                return;
+            }
 
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = '';
+            // 备份今天的数据（只备份一次）
+            if (!_todayBackup) {
+                _todayBackup = JSON.parse(JSON.stringify(appState));
+            }
 
+            // 从 history 加载那天的数据
             if (appState.history[formattedDate]) {
                 const tasks = appState.history[formattedDate];
-                const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
-
-                tasks.forEach((completed, index) => {
-                    if (index >= taskNames.length) return;
-                    const li = document.createElement('li');
-                    li.className = 'history-item';
-                    li.innerHTML = `
-                        <span class="history-item-name">${taskNames[index]}</span>
-                        <span class="history-item-status">${completed ? '✅' : '❌'}</span>
-                    `;
-                    historyList.appendChild(li);
-                });
-            } else if (formattedDate === appState.today) {
-                // 显示今天的数据
-                const tasks = getCompletionStatus();
-                const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
-
-                tasks.forEach((completed, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'history-item';
-                    li.innerHTML = `
-                        <span class="history-item-name">${taskNames[index]}</span>
-                        <span class="history-item-status">${completed ? '✅' : '⚪'}</span>
-                    `;
-                    historyList.appendChild(li);
-                });
+                // 把布尔数组映射回 appState 各字段
+                // [喝水, 睡眠, 泡脚, 快走, 三餐, 禁食, 体重, 运动, 晨跑]
+                appState.water = tasks[0] ? 5 : 0;
+                appState.sleep.duration = tasks[1] ? 480 : 0;
+                appState.sleep.bedTime = tasks[1] ? 1 : null;
+                appState.sleep.wakeTime = tasks[1] ? 2 : null;
+                appState.sleep.onTime = tasks[1];
+                appState.footBath.completed = !!tasks[2];
+                appState.footBath.duration = tasks[2] ? 20 : 0;
+                appState.walking.completed = !!tasks[3];
+                appState.walking.duration = tasks[3] ? 60 : 0;
+                appState.meals.breakfast.checked = !!tasks[4];
+                appState.meals.lunch.checked = !!tasks[4];
+                appState.meals.dinner.checked = !!tasks[4];
+                appState.noEating.completed = !!tasks[5];
+                appState.weight.value = tasks[6] ? (_todayBackup.weight.value || 0) : 0;
+                appState.weight.recorded = !!tasks[6];
+                appState.exercise.count = tasks[7] ? 2 : 0;
+                appState.morningRun.count = tasks[8] ? 2 : 0;
             } else {
-                historyList.innerHTML = '<div class="no-data">暂无记录</div>';
+                // 没有记录，全部清零
+                appState.water = 0;
+                appState.sleep.duration = 0;
+                appState.sleep.bedTime = null;
+                appState.sleep.wakeTime = null;
+                appState.sleep.onTime = false;
+                appState.footBath.completed = false;
+                appState.footBath.duration = 0;
+                appState.walking.completed = false;
+                appState.walking.duration = 0;
+                appState.meals.breakfast.checked = false;
+                appState.meals.lunch.checked = false;
+                appState.meals.dinner.checked = false;
+                appState.noEating.completed = false;
+                appState.weight.value = 0;
+                appState.weight.recorded = false;
+                appState.exercise.count = 0;
+                appState.morningRun.count = 0;
             }
+
+            _viewingHistory = true;
+
+            // 显示正在查看历史日期的标记
+            const displayDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            let banner = document.getElementById('history-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'history-banner';
+                banner.style.cssText = 'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;text-align:center;padding:10px 16px;font-size:14px;border-radius:12px;margin:8px 16px;display:flex;justify-content:space-between;align-items:center;';
+                const container = document.querySelector('.container');
+                container.insertBefore(banner, container.children[1]);
+            }
+            banner.innerHTML = `<span>📅 正在查看 ${displayDate}</span><span onclick="switchToDate('${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}')"
+                style="cursor:pointer;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:8px;font-size:13px;">返回今天</span>`;
+
+            // 禁用所有按钮操作（历史模式只能看，不能改）
+            document.querySelector('.container').classList.add('history-view');
+
+            updateUI();
         }
 
         // 显示庆祝动画
