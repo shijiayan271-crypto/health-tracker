@@ -1,6 +1,6 @@
 {
   "today": "Wed Apr 22 2026",
-  "water": 5,
+  "water": 3,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
@@ -22,19 +22,19 @@
       "checked": true,
       "protein": true,
       "grain": true,
-      "time": 1776842813411
+      "time": 1745280900000
     },
     "lunch": {
       "checked": true,
       "protein": true,
       "grain": true,
-      "time": 1776842813914
+      "time": 1745289300000
     },
     "dinner": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776842814711
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": 1776690317902
     }
   },
   "noEating": {
@@ -43,14 +43,14 @@
   "weight": {
     "value": 73.2,
     "bmi": 28.2,
-    "category": "ÃÂ¨ÃÂÃÂ¥ÃÂ¨ÃÂÃÂ",
+    "category": "è¥è",
     "time": 1776837411279
   },
   "exercise": {
-    "weekCount": 1,
-    "type": "Ã¥ÂÂ¶Ã¤Â»Â",
+    "weekCount": 2,
+    "type": "其他",
     "startTime": null,
-    "duration": 30,
+    "duration": 24,
     "todayCompleted": true
   },
   "morningRun": {
@@ -59,29 +59,29 @@
     "duration": 0,
     "todayCompleted": false
   },
-  "streak": 0,
+  "streak": 3,
   "history": {
     "Mon Apr 20 2026": {
       "tasks": [
         true,
-        false,
-        false,
         true,
         true,
         true,
-        false,
+        true,
+        true,
+        true,
         false,
         false
       ],
       "water": 5,
-      "sleepDuration": null,
-      "sleepBedTime": null,
-      "sleepWakeTime": null,
-      "sleepOnTime": true,
-      "weight": null,
-      "bmi": null,
-      "completed": 4,
-      "dailyCompleted": 4,
+      "sleepDuration": 8.7,
+      "sleepBedTime": "23:51",
+      "sleepWakeTime": "08:30",
+      "sleepOnTime": false,
+      "weight": 74,
+      "bmi": 28.7,
+      "completed": 6,
+      "dailyCompleted": 6,
       "dailyTotal": 7,
       "total": 9,
       "streak": 0,
@@ -90,48 +90,49 @@
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776690315017
+          "time": 1745107500000
         },
         "lunch": {
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776690316451
+          "time": 1745116200000
         },
         "dinner": {
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776690317902
+          "time": 1745135100000
         }
       },
       "noEating": true,
-      "footbath": false,
-      "footbathDuration": 0,
+      "footbath": true,
+      "footbathDuration": 24,
       "walk": true,
-      "walkDuration": 65
+      "walkDuration": 65,
+      "lastModified": 1745308200000
     },
     "Tue Apr 21 2026": {
       "tasks": [
         true,
-        false,
-        false,
-        false,
         true,
         false,
+        true,
+        true,
+        true,
         true,
         false,
         false
       ],
       "water": 5,
-      "sleepDuration": null,
-      "sleepBedTime": null,
-      "sleepWakeTime": null,
+      "sleepDuration": 8.8,
+      "sleepBedTime": "23:40",
+      "sleepWakeTime": "08:30",
       "sleepOnTime": false,
       "weight": 73.2,
       "bmi": 28.2,
-      "completed": 3,
-      "dailyCompleted": 3,
+      "completed": 5,
+      "dailyCompleted": 5,
       "dailyTotal": 7,
       "total": 9,
       "meals": {
@@ -139,27 +140,28 @@
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776842813411
+          "time": 1745193900000
         },
         "lunch": {
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776842813914
+          "time": 1745202600000
         },
         "dinner": {
           "checked": true,
           "protein": true,
           "grain": true,
-          "time": 1776842814711
+          "time": 1745226540000
         }
       },
-      "noEating": false,
+      "noEating": true,
       "footbath": false,
       "footbathDuration": 0,
       "walk": false,
-      "walkDuration": 0
+      "walkDuration": 0,
+      "lastModified": 1745308200000
     }
   },
-  "lastModified": 1776842848518
+  "lastModified": 1745308200000
 }
