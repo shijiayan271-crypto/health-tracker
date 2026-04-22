@@ -3020,7 +3020,7 @@
                 const fileData = await resp.json();
                 fileSha[currentUser] = fileData.sha;
                 // GitHub 返回 base64 编码的内容
-                const content = atob(fileData.content.replace(/\n/g, ''));
+                const content = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
                 return JSON.parse(content);
             } catch (e) {
                 console.warn('Cloud: fetch failed', e);
@@ -3140,12 +3140,52 @@
         function mergeTodayData(localState, cloudState) {
             const localMod = localState.lastModified || 0;
             const cloudMod = cloudState.lastModified || 0;
-            // 云端更新，用云端当天数据
-            if (cloudMod > localMod) {
-                return cloudState;
+            // 【修复5】智能合并今天数据，不再简单二选一
+            // 以 lastModified 更新的为基底，但用另一端的更高值补充
+            const base = cloudMod > localMod ? cloudState : localState;
+            const other = cloudMod > localMod ? localState : cloudState;
+            
+            // 水：取更高值
+            if ((other.water || 0) > (base.water || 0)) base.water = other.water;
+            // 运动周次数：取更高值
+            if (other.exercise && base.exercise) {
+                if ((other.exercise.weekCount || 0) > (base.exercise.weekCount || 0)) {
+                    base.exercise.weekCount = other.exercise.weekCount;
+                }
+                if (other.exercise.todayCompleted && !base.exercise.todayCompleted) {
+                    base.exercise.todayCompleted = true;
+                    base.exercise.type = other.exercise.type || base.exercise.type;
+                    base.exercise.duration = other.exercise.duration || base.exercise.duration;
+                }
             }
-            // 本地更新，保留本地当天数据
-            return localState;
+            // 睡眠：取有数据的那个
+            if (other.sleep && other.sleep.duration > 0 && (!base.sleep || base.sleep.duration === 0)) {
+                base.sleep = other.sleep;
+            }
+            // 三餐：取已打卡的
+            if (other.meals && base.meals) {
+                ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+                    if (other.meals[meal] && other.meals[meal].checked && (!base.meals[meal] || !base.meals[meal].checked)) {
+                        base.meals[meal] = other.meals[meal];
+                    }
+                });
+            }
+            // 体重：取有值的
+            if (other.weight && other.weight.value && (!base.weight || !base.weight.value)) {
+                base.weight = other.weight;
+            }
+            // 泡脚/散步：取已完成的
+            if (other.footbath && other.footbath.completed && (!base.footbath || !base.footbath.completed)) {
+                base.footbath = other.footbath;
+            }
+            if (other.walk && other.walk.completed && (!base.walk || !base.walk.completed)) {
+                base.walk = other.walk;
+            }
+            // 过午不食：取已完成的
+            if (other.noEating && other.noEating.completed && (!base.noEating || !base.noEating.completed)) {
+                base.noEating = other.noEating;
+            }
+            return base;
         }
 
         // 从云端同步（页面加载时调用）
@@ -3161,13 +3201,10 @@
                     // 【修复4】智能合并 history
                     const mergedHistory = mergeHistories(localHistory, cloudHistory);
 
-                    // 【修复4】智能合并当天数据
-                    const winner = mergeTodayData(appState, cloudData);
-                    // 如果云端更新，用云端数据作为基底
-                    if (winner === cloudData) {
-                        appState = cloudData;
-                    }
-                    // 无论哪端赢，都用合并后的 history
+                    // 【修复5】智能合并当天数据（不再二选一，而是字段级合并）
+                    const merged = mergeTodayData(appState, cloudData);
+                    appState = merged;
+                    // 无论如何都用合并后的 history
                     appState.history = mergedHistory;
                     if (!appState.history) appState.history = {};
 
@@ -3206,26 +3243,9 @@
                     const localHistory = appState.history || {};
                     const cloudHistory = cloudData.history || {};
                     const mergedHistory = mergeHistories(localHistory, cloudHistory);
-                    const winner = mergeTodayData(appState, cloudData);
-                    if (winner === cloudData) {
-                        // 云端更新，保留云端当天数据但合并 history
-                        const localToday = JSON.parse(JSON.stringify(appState));
-                        appState = cloudData;
-                        // 但保留本地的当天修改（如果本地有新操作）
-                        if (localToday.lastModified > cloudData.lastModified) {
-                            Object.assign(appState, {
-                                water: localToday.water,
-                                sleep: localToday.sleep,
-                                footbath: localToday.footbath,
-                                walk: localToday.walk,
-                                meals: localToday.meals,
-                                noEating: localToday.noEating,
-                                weight: localToday.weight,
-                                exercise: localToday.exercise,
-                                morningRun: localToday.morningRun
-                            });
-                        }
-                    }
+                    // 【修复5】用字段级合并替代二选一
+                    const merged = mergeTodayData(appState, cloudData);
+                    appState = merged;
                     appState.history = mergedHistory;
                     recalcStreak();
                 }
