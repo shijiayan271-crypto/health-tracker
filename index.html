@@ -2492,12 +2492,36 @@
 
         // 显示历史记录模态框
         function showHistoryModal() {
-            const dateStr = prompt('请输入要查看的日期（格式：YYYY-MM-DD），例如：2026-04-20');
+            const rawInput = prompt('请输入要查看的日期（格式：YYYY-MM-DD），例如：2026-04-20');
 
-            if (!dateStr) return;
+            if (!rawInput) return;
 
             try {
-                const dateObj = new Date(dateStr);
+                // 去除空格、全角字符，统一为半角横杠
+                const dateStr = rawInput.trim()
+                    .replace(/[\s\u3000]/g, '')  // 去除全角/半角空格
+                    .replace(/[－—–]/g, '-')      // 全角横杠→半角
+                    .replace(/[．。]/g, '.')       // 全角句点→半角（以防）
+                    .replace(/[／]/g, '/')         // 全角斜杠→半角
+                    .replace(/\//g, '-');          // 斜杠→横杠
+
+                // 手动解析 YYYY-MM-DD，不依赖 new Date() 的跨浏览器行为
+                const match = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                if (!match) {
+                    alert('日期格式不正确，请使用 YYYY-MM-DD 格式，例如：2026-04-20');
+                    return;
+                }
+                const year = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10) - 1; // JS月份从0开始
+                const day = parseInt(match[3], 10);
+                const dateObj = new Date(year, month, day);
+
+                // 验证日期是否合法（防止 2026-02-30 这种）
+                if (dateObj.getFullYear() !== year || dateObj.getMonth() !== month || dateObj.getDate() !== day) {
+                    alert('日期不存在，请检查后重新输入');
+                    return;
+                }
+
                 const formattedDate = dateObj.toDateString();
 
                 document.getElementById('history-date').textContent = `${dateStr} 的记录`;
