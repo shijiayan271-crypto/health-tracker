@@ -1506,8 +1506,8 @@
         </div>
     </div>
 
-    <!-- 隐藏的日期选择器，点日历按钮时触发 -->
-    <input type="date" id="history-date-input" style="position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;" />
+    <!-- 日期选择器，点日历按钮时触发 -->
+    <input type="date" id="history-date-input" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;width:1px;height:1px;border:none;z-index:99999;" />
 
     <script>
         // 数据结构
@@ -2497,20 +2497,49 @@
             dateInput.value = `${yyyy}-${mm}-${dd}`;
             dateInput.max = `${yyyy}-${mm}-${dd}`;
 
-            // 监听日期变化 — 选完后加载到主页
-            dateInput.onchange = function() {
-                switchToDate(this.value);
-            };
+            // 记录打开时的值，用于对比是否真的改了
+            const openValue = dateInput.value;
+
+            // 清除旧的事件监听
+            const newInput = dateInput.cloneNode(true);
+            dateInput.parentNode.replaceChild(newInput, dateInput);
+
+            // 同时监听 change 和 input 事件，兼容不同浏览器
+            function handleDateChange() {
+                const val = newInput.value;
+                if (val && val !== openValue) {
+                    switchToDate(val);
+                } else if (val) {
+                    switchToDate(val);
+                }
+            }
+            newInput.addEventListener('change', handleDateChange);
+            newInput.addEventListener('input', handleDateChange);
 
             // 强制弹出日期选择器
-            dateInput.style.pointerEvents = 'auto';
-            dateInput.focus();
-            dateInput.click();
-            if (typeof dateInput.showPicker === 'function') {
-                try { dateInput.showPicker(); } catch(e) {}
+            newInput.style.opacity = '0.01';
+            newInput.style.width = '100%';
+            newInput.style.height = '100%';
+            newInput.style.position = 'fixed';
+            newInput.style.top = '0';
+            newInput.style.left = '0';
+            newInput.style.zIndex = '99999';
+            newInput.focus();
+            if (typeof newInput.showPicker === 'function') {
+                try { newInput.showPicker(); } catch(e) {}
             }
-            // 延迟恢复隐藏
-            setTimeout(() => { dateInput.style.pointerEvents = 'none'; }, 500);
+            newInput.click();
+
+            // 用 blur 事件检测选择器关闭，然后恢复隐藏
+            newInput.addEventListener('blur', function restoreHidden() {
+                newInput.style.opacity = '0';
+                newInput.style.width = '1px';
+                newInput.style.height = '1px';
+                newInput.style.position = 'fixed';
+                newInput.style.top = '50%';
+                newInput.style.left = '50%';
+                newInput.removeEventListener('blur', restoreHidden);
+            });
         }
 
         // 切换主页面到指定日期的数据
