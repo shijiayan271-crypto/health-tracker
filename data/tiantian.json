@@ -1,11 +1,11 @@
 {
   "today": "Wed Apr 22 2026",
-  "water": 0,
+  "water": 5,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
     "duration": 0,
-    "onTime": true
+    "onTime": false
   },
   "footbath": {
     "startTime": null,
@@ -19,19 +19,19 @@
   },
   "meals": {
     "breakfast": {
-      "checked": false,
+      "checked": true,
       "protein": false,
       "grain": false,
       "time": null
     },
     "lunch": {
-      "checked": false,
+      "checked": true,
       "protein": false,
       "grain": false,
       "time": null
     },
     "dinner": {
-      "checked": false,
+      "checked": true,
       "protein": false,
       "grain": false,
       "time": null
@@ -41,8 +41,8 @@
     "completed": false
   },
   "weight": {
-    "value": null,
-    "bmi": null,
+    "value": 73.2,
+    "bmi": 28.2,
     "category": null,
     "time": null
   },
@@ -112,5 +112,5 @@
       "noEating": false
     }
   },
-  "lastModified": 1776818588807
+  "lastModified": 1776828710950
 }
