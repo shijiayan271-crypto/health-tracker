@@ -1646,14 +1646,58 @@
             document.querySelector('.fab').style.display = 'none';
         }
 
-        function selectUser(userId) {
+        async function selectUser(userId) {
             currentUser = userId;
-            localStorage.setItem('healthTracker_lastUser', userId);
+            try { localStorage.setItem('healthTracker_lastUser', userId); } catch(e) {}
             document.getElementById('user-select-screen').classList.add('hidden');
             document.getElementById('main-container').style.display = '';
             document.querySelector('.fab').style.display = '';
             updateUserAvatar();
-            loadData();
+            
+            // 先尝试从 localStorage 加载
+            const saved = localStorage.getItem(getStorageKey());
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                    if (!appState.history) appState.history = {};
+                } catch(e) { console.warn('localStorage parse error', e); }
+            }
+            
+            // 如果本地没有数据（无痕窗口），显示加载提示并等待云端同步完成
+            const hasLocalData = !!saved;
+            if (!hasLocalData) {
+                updateGreeting();
+                // 显示加载中状态
+                const mainContent = document.getElementById('main-container');
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'cloud-loading-overlay';
+                loadingOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px;';
+                loadingOverlay.innerHTML = '<div style="font-size:24px;">☁️</div><div style="font-size:16px;color:#666;">正在从云端加载数据...</div>';
+                document.body.appendChild(loadingOverlay);
+                
+                try {
+                    const cloudData = await fetchFromCloud();
+                    if (cloudData && cloudData.lastModified) {
+                        appState = cloudData;
+                        if (!appState.history) appState.history = {};
+                        try { saveDataLocal(); } catch(e) {}
+                        console.log('Cloud data loaded successfully', Object.keys(cloudData));
+                    } else {
+                        console.warn('No cloud data found or empty response');
+                    }
+                } catch(e) {
+                    console.error('Cloud sync failed in selectUser:', e);
+                }
+                
+                // 移除加载提示
+                const overlay = document.getElementById('cloud-loading-overlay');
+                if (overlay) overlay.remove();
+            } else {
+                // 有本地数据，后台异步同步
+                syncFromCloud();
+            }
+            
+            recalcStreak();
             checkNewDay();
             updateGreeting();
             updateUI();
@@ -1661,7 +1705,6 @@
             // 【修复8】无 token 时显示提示，但不阻塞进入（public repo 可以只读同步）
             const token = getGithubToken();
             if (!token) {
-                // 显示 token 输入提示（可选，用于开启写入同步）
                 document.getElementById('token-prompt').style.display = 'flex';
             }
         }
