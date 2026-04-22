@@ -8,7 +8,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>健康习惯监督 v3</title>
+    <title>健康习惯监督 v4</title>
     <style>
         * {
             margin: 0;
@@ -1250,7 +1250,7 @@
     <div class="user-select-screen hidden" id="user-select-screen">
         <div class="user-select-title">选择你的身份</div>
         <div class="user-select-subtitle">每天进步一点点，遇见更好的自己</div>
-        <div style="font-size:11px;color:#bbb;margin-top:4px;">v3 · cloud-sync</div>
+        <div style="font-size:11px;color:#bbb;margin-top:4px;">v4 · cloud-sync</div>
         <div class="user-cards">
             <div class="user-card" onclick="selectUser('tiantian')">
                 <div class="user-card-emoji">🌸</div>
@@ -1682,23 +1682,22 @@
                         appState = cloudData;
                         if (!appState.history) appState.history = {};
                         try { saveDataLocal(); } catch(e) {}
-                        console.log('Cloud data loaded successfully, keys:', Object.keys(cloudData), 'history days:', Object.keys(cloudData.history || {}));
+                        console.log('Cloud: loaded OK, water=' + cloudData.water + ', history=' + Object.keys(cloudData.history || {}).length + 'days');
                     } else {
-                        console.warn('No cloud data found or empty response');
-                        // 显示提示让用户知道
+                        console.warn('Cloud: no data returned (all 3 channels failed or 404)');
                         const overlay = document.getElementById('cloud-loading-overlay');
                         if (overlay) {
-                            overlay.innerHTML = '<div style="font-size:24px;">⚠️</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端数据加载失败<br>可能是网络问题或 GitHub 访问受限<br><br>请稍后点击 🔄 重试</div>';
-                            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3000);
-                            return; // 提前返回，不走后续 updateUI
+                            overlay.innerHTML = '<div style="font-size:24px;">⚠️</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端数据加载失败<br>可能是网络问题或 GitHub 访问受限<br><br>点击任意位置关闭此提示</div>';
+                            overlay.onclick = () => overlay.remove();
+                            // 不 return，让用户看到空白页面后可以手动同步
                         }
                     }
                 } catch(e) {
                     console.error('Cloud sync failed in selectUser:', e);
                     const overlay = document.getElementById('cloud-loading-overlay');
                     if (overlay) {
-                        overlay.innerHTML = '<div style="font-size:24px;">❌</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端同步出错: ' + (e.message || '未知错误') + '<br><br>请稍后点击 🔄 重试</div>';
-                        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3000);
+                        overlay.innerHTML = '<div style="font-size:24px;">❌</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端同步出错: ' + (e.message || '未知错误') + '<br><br>点击任意位置关闭</div>';
+                        overlay.onclick = () => overlay.remove();
                     }
                 }
                 
@@ -3075,6 +3074,15 @@
         }
 
         // 从 GitHub 获取数据
+        // 带超时的 fetch 封装
+        function fetchWithTimeout(url, options, timeoutMs) {
+            timeoutMs = timeoutMs || 8000;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+                .finally(() => clearTimeout(timer));
+        }
+
         async function fetchFromCloud() {
             const fileName = getCloudFileName();
             if (!fileName) return null;
@@ -3089,10 +3097,10 @@
                 if (ghToken) {
                     headers['Authorization'] = `Bearer ${ghToken}`;
                 }
-                const resp = await fetch(`${GITHUB_API}/${fileName}`, {
+                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
                     headers: headers,
                     cache: 'no-store'
-                });
+                }, 8000);
                 if (resp.ok) {
                     const fileData = await resp.json();
                     fileSha[currentUser] = fileData.sha;
@@ -3104,13 +3112,13 @@
                 // API 失败（可能速率限制），fall through 到备用方式
                 console.warn('Cloud: GitHub API returned', resp.status, '- trying raw fallback');
             } catch (e) {
-                console.warn('Cloud: GitHub API fetch failed', e, '- trying raw fallback');
+                console.warn('Cloud: GitHub API fetch failed', e.name === 'AbortError' ? '(timeout 8s)' : e, '- trying raw fallback');
             }
             
             // 方式2: raw.githubusercontent.com 备用通道（不受 API 速率限制）
             try {
                 const rawUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/data/${fileName}?t=${Date.now()}`;
-                const resp2 = await fetch(rawUrl, { cache: 'no-store' });
+                const resp2 = await fetchWithTimeout(rawUrl, { cache: 'no-store' }, 8000);
                 if (resp2.ok) {
                     const text = await resp2.text();
                     console.log('Cloud: fetched via raw fallback');
@@ -3120,6 +3128,20 @@
                 console.warn('Cloud: raw fallback returned', resp2.status);
             } catch (e2) {
                 console.warn('Cloud: raw fallback also failed', e2);
+            }
+            
+            // 方式3: jsDelivr CDN 备用通道（中国大陆可访问，有一定缓存延迟）
+            try {
+                const cdnUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@main/data/${fileName}`;
+                const resp3 = await fetchWithTimeout(cdnUrl, { cache: 'no-store' }, 8000);
+                if (resp3.ok) {
+                    const text = await resp3.text();
+                    console.log('Cloud: fetched via jsDelivr CDN fallback');
+                    return JSON.parse(text);
+                }
+                console.warn('Cloud: jsDelivr CDN returned', resp3.status);
+            } catch (e3) {
+                console.warn('Cloud: jsDelivr CDN also failed', e3);
             }
             
             return null;
