@@ -544,6 +544,37 @@
             color: #333;
         }
 
+        .history-date-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0;
+            margin-bottom: 8px;
+        }
+
+        .history-date-picker label {
+            font-size: 15px;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .history-date-picker input[type="date"] {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            color: #333;
+            background: #f9f9ff;
+            outline: none;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+        }
+
+        .history-date-picker input[type="date"]:focus {
+            border-color: #667eea;
+        }
+
         .history-list {
             list-style: none;
         }
@@ -1503,6 +1534,10 @@
             <div class="modal-header">
                 <div class="modal-title" id="history-date">历史记录</div>
                 <div class="modal-close" id="history-close">×</div>
+            </div>
+            <div class="history-date-picker">
+                <label for="history-date-input">选择日期：</label>
+                <input type="date" id="history-date-input" />
             </div>
             <ul class="history-list" id="history-list"></ul>
         </div>
@@ -2492,78 +2527,72 @@
 
         // 显示历史记录模态框
         function showHistoryModal() {
-            const rawInput = prompt('请输入要查看的日期（格式：YYYY-MM-DD），例如：2026-04-20');
+            const dateInput = document.getElementById('history-date-input');
+            // 默认选中今天
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+            dateInput.max = `${yyyy}-${mm}-${dd}`;
 
-            if (!rawInput) return;
+            // 先显示弹窗，再加载今天的数据
+            document.getElementById('history-modal').style.display = 'flex';
+            loadHistoryForDate(dateInput.value);
 
-            try {
-                // 去除空格、全角字符，统一为半角横杠
-                const dateStr = rawInput.trim()
-                    .replace(/[\s\u3000]/g, '')  // 去除全角/半角空格
-                    .replace(/[－—–]/g, '-')      // 全角横杠→半角
-                    .replace(/[．。]/g, '.')       // 全角句点→半角（以防）
-                    .replace(/[／]/g, '/')         // 全角斜杠→半角
-                    .replace(/\//g, '-');          // 斜杠→横杠
+            // 监听日期变化
+            dateInput.onchange = function() {
+                loadHistoryForDate(this.value);
+            };
+        }
 
-                // 手动解析 YYYY-MM-DD，不依赖 new Date() 的跨浏览器行为
-                const match = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-                if (!match) {
-                    alert('日期格式不正确，请使用 YYYY-MM-DD 格式，例如：2026-04-20');
-                    return;
-                }
-                const year = parseInt(match[1], 10);
-                const month = parseInt(match[2], 10) - 1; // JS月份从0开始
-                const day = parseInt(match[3], 10);
-                const dateObj = new Date(year, month, day);
+        // 根据日期加载历史记录
+        function loadHistoryForDate(dateStr) {
+            if (!dateStr) return;
 
-                // 验证日期是否合法（防止 2026-02-30 这种）
-                if (dateObj.getFullYear() !== year || dateObj.getMonth() !== month || dateObj.getDate() !== day) {
-                    alert('日期不存在，请检查后重新输入');
-                    return;
-                }
+            const parts = dateStr.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            const dateObj = new Date(year, month, day);
+            const formattedDate = dateObj.toDateString();
 
-                const formattedDate = dateObj.toDateString();
+            const displayDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            document.getElementById('history-date').textContent = `${displayDate} 的记录`;
 
-                document.getElementById('history-date').textContent = `${dateStr} 的记录`;
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
 
-                const historyList = document.getElementById('history-list');
-                historyList.innerHTML = '';
+            if (appState.history[formattedDate]) {
+                const tasks = appState.history[formattedDate];
+                const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
 
-                if (appState.history[formattedDate]) {
-                    const tasks = appState.history[formattedDate];
-                    const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
+                tasks.forEach((completed, index) => {
+                    if (index >= taskNames.length) return;
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.innerHTML = `
+                        <span class="history-item-name">${taskNames[index]}</span>
+                        <span class="history-item-status">${completed ? '✅' : '❌'}</span>
+                    `;
+                    historyList.appendChild(li);
+                });
+            } else if (formattedDate === appState.today) {
+                // 显示今天的数据
+                const tasks = getCompletionStatus();
+                const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
 
-                    tasks.forEach((completed, index) => {
-                        if (index >= taskNames.length) return;
-                        const li = document.createElement('li');
-                        li.className = 'history-item';
-                        li.innerHTML = `
-                            <span class="history-item-name">${taskNames[index]}</span>
-                            <span class="history-item-status">${completed ? '✅' : '❌'}</span>
-                        `;
-                        historyList.appendChild(li);
-                    });
-                } else if (formattedDate === appState.today) {
-                    // 显示今天的数据
-                    const tasks = getCompletionStatus();
-                    const taskNames = ['喝水 (5杯)', '睡眠 (8小时)', '泡脚 (20分钟)', '快走 (60分钟)', '三餐', '19:30后禁食', '体重记录', '运动 (每周2次)', '晨跑 (每周2次)'];
-
-                    tasks.forEach((completed, index) => {
-                        const li = document.createElement('li');
-                        li.className = 'history-item';
-                        li.innerHTML = `
-                            <span class="history-item-name">${taskNames[index]}</span>
-                            <span class="history-item-status">${completed ? '✅' : '⚪'}</span>
-                        `;
-                        historyList.appendChild(li);
-                    });
-                } else {
-                    historyList.innerHTML = '<div class="no-data">暂无记录</div>';
-                }
-
-                document.getElementById('history-modal').style.display = 'flex';
-            } catch (error) {
-                alert('日期格式不正确，请使用 YYYY-MM-DD 格式，例如：2026-04-20');
+                tasks.forEach((completed, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.innerHTML = `
+                        <span class="history-item-name">${taskNames[index]}</span>
+                        <span class="history-item-status">${completed ? '✅' : '⚪'}</span>
+                    `;
+                    historyList.appendChild(li);
+                });
+            } else {
+                historyList.innerHTML = '<div class="no-data">暂无记录</div>';
             }
         }
 
