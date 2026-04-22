@@ -47,11 +47,11 @@
     "time": null
   },
   "exercise": {
-    "weekCount": 0,
+    "weekCount": 1,
     "type": null,
     "startTime": null,
-    "duration": 0,
-    "todayCompleted": false
+    "duration": 24,
+    "todayCompleted": true
   },
   "morningRun": {
     "weekCount": 0,
@@ -118,5 +118,5 @@
       "noEating": true
     }
   },
-  "lastModified": 1776833620000
+  "lastModified": 1776836600000
 }
