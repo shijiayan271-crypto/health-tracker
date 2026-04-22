@@ -43,12 +43,12 @@
   "weight": {
     "value": 73.2,
     "bmi": 28.2,
-    "category": "ÃÂ¨ÃÂÃÂ¥ÃÂ¨ÃÂÃÂ",
+    "category": "ÃÂÃÂ¨ÃÂÃÂÃÂÃÂ¥ÃÂÃÂ¨ÃÂÃÂÃÂÃÂ",
     "time": 1776837411279
   },
   "exercise": {
     "weekCount": 1,
-    "type": "Ã¥ÂÂ¶Ã¤Â»Â",
+    "type": "ÃÂ¥ÃÂÃÂ¶ÃÂ¤ÃÂ»ÃÂ",
     "startTime": null,
     "duration": 30,
     "todayCompleted": true
@@ -163,5 +163,5 @@
       "lastModified": 1745308200000
     }
   },
-  "lastModified": 1776844833960
+  "lastModified": 1776845413779
 }
