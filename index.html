@@ -1682,12 +1682,24 @@
                         appState = cloudData;
                         if (!appState.history) appState.history = {};
                         try { saveDataLocal(); } catch(e) {}
-                        console.log('Cloud data loaded successfully', Object.keys(cloudData));
+                        console.log('Cloud data loaded successfully, keys:', Object.keys(cloudData), 'history days:', Object.keys(cloudData.history || {}));
                     } else {
                         console.warn('No cloud data found or empty response');
+                        // 显示提示让用户知道
+                        const overlay = document.getElementById('cloud-loading-overlay');
+                        if (overlay) {
+                            overlay.innerHTML = '<div style="font-size:24px;">⚠️</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端数据加载失败<br>可能是网络问题或 GitHub 访问受限<br><br>请稍后点击 🔄 重试</div>';
+                            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3000);
+                            return; // 提前返回，不走后续 updateUI
+                        }
                     }
                 } catch(e) {
                     console.error('Cloud sync failed in selectUser:', e);
+                    const overlay = document.getElementById('cloud-loading-overlay');
+                    if (overlay) {
+                        overlay.innerHTML = '<div style="font-size:24px;">❌</div><div style="font-size:14px;color:#999;text-align:center;padding:0 20px;">云端同步出错: ' + (e.message || '未知错误') + '<br><br>请稍后点击 🔄 重试</div>';
+                        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3000);
+                    }
                 }
                 
                 // 移除加载提示
@@ -3066,9 +3078,10 @@
         async function fetchFromCloud() {
             const fileName = getCloudFileName();
             if (!fileName) return null;
+            
+            // 方式1: GitHub API（可获取 sha，用于后续写入）
             try {
                 const ghToken = getGithubToken();
-                // 【修复8】public repo 不需要 token 也能读取
                 const headers = {
                     'Accept': 'application/vnd.github.v3+json',
                     'If-None-Match': ''
@@ -3080,19 +3093,36 @@
                     headers: headers,
                     cache: 'no-store'
                 });
-                if (!resp.ok) {
-                    if (resp.status === 404) return null;
-                    throw new Error(`HTTP ${resp.status}`);
+                if (resp.ok) {
+                    const fileData = await resp.json();
+                    fileSha[currentUser] = fileData.sha;
+                    const content = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
+                    console.log('Cloud: fetched via GitHub API');
+                    return JSON.parse(content);
                 }
-                const fileData = await resp.json();
-                fileSha[currentUser] = fileData.sha;
-                // GitHub 返回 base64 编码的内容
-                const content = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
-                return JSON.parse(content);
+                if (resp.status === 404) return null;
+                // API 失败（可能速率限制），fall through 到备用方式
+                console.warn('Cloud: GitHub API returned', resp.status, '- trying raw fallback');
             } catch (e) {
-                console.warn('Cloud: fetch failed', e);
-                return null;
+                console.warn('Cloud: GitHub API fetch failed', e, '- trying raw fallback');
             }
+            
+            // 方式2: raw.githubusercontent.com 备用通道（不受 API 速率限制）
+            try {
+                const rawUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/data/${fileName}?t=${Date.now()}`;
+                const resp2 = await fetch(rawUrl, { cache: 'no-store' });
+                if (resp2.ok) {
+                    const text = await resp2.text();
+                    console.log('Cloud: fetched via raw fallback');
+                    return JSON.parse(text);
+                }
+                if (resp2.status === 404) return null;
+                console.warn('Cloud: raw fallback returned', resp2.status);
+            } catch (e2) {
+                console.warn('Cloud: raw fallback also failed', e2);
+            }
+            
+            return null;
         }
 
         // 【修复2】上传数据到 GitHub，带重试计数器防止无限递归
