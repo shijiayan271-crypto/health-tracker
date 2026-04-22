@@ -548,8 +548,7 @@
         .history-view .card .cup,
         .history-view .card input,
         .history-view .meal-btn {
-            pointer-events: none;
-            opacity: 0.6;
+            /* 历史模式允许修改 */
         }
 
         .history-list {
@@ -1506,8 +1505,27 @@
         </div>
     </div>
 
-    <!-- 日期选择器，点日历按钮时触发 -->
-    <input type="date" id="history-date-input" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;width:1px;height:1px;border:none;z-index:99999;" />
+    <!-- 日历弹窗 -->
+    <div id="calendar-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99999;justify-content:center;align-items:center;">
+        <div style="background:#fff;border-radius:16px;padding:20px;width:320px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <div id="cal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <button onclick="calNav(-1)" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px 12px;">◀</button>
+                <span id="cal-title" style="font-size:16px;font-weight:bold;color:#333;"></span>
+                <button onclick="calNav(1)" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px 12px;">▶</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:8px;">
+                <span style="font-size:12px;color:#999;padding:4px;">日</span>
+                <span style="font-size:12px;color:#999;padding:4px;">一</span>
+                <span style="font-size:12px;color:#999;padding:4px;">二</span>
+                <span style="font-size:12px;color:#999;padding:4px;">三</span>
+                <span style="font-size:12px;color:#999;padding:4px;">四</span>
+                <span style="font-size:12px;color:#999;padding:4px;">五</span>
+                <span style="font-size:12px;color:#999;padding:4px;">六</span>
+            </div>
+            <div id="cal-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;"></div>
+            <button onclick="closeCalendar()" style="width:100%;margin-top:16px;padding:10px;border:none;border-radius:10px;background:#eee;color:#666;font-size:14px;cursor:pointer;">取消</button>
+        </div>
+    </div>
 
     <script>
         // 数据结构
@@ -1758,12 +1776,40 @@
         // 历史查看模式状态
         let _todayBackup = null;
         let _viewingHistory = false;
+        let _viewingDate = null;
 
         // 保存数据
         function saveData() {
             if (!currentUser) return;
-            // 历史查看模式下不保存，防止覆盖今天数据
-            if (_viewingHistory) return;
+            // 历史编辑模式：保存到历史记录而不是今天的数据
+            if (_viewingHistory && _viewingDate) {
+                const completionStatus = getCompletionStatus();
+                const dailyStatus = getDailyCompletionStatus();
+                appState.history[_viewingDate] = {
+                    tasks: completionStatus,
+                    water: appState.water || 0,
+                    sleepDuration: appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null,
+                    weight: appState.weight && appState.weight.value ? appState.weight.value : null,
+                    bmi: appState.weight && appState.weight.bmi ? appState.weight.bmi : null,
+                    completed: completionStatus.filter(t => t).length,
+                    dailyCompleted: dailyStatus.filter(t => t).length,
+                    dailyTotal: 7,
+                    total: completionStatus.length,
+                    meals: JSON.parse(JSON.stringify(appState.meals)),
+                    noEating: appState.noEating.completed,
+                    footbath: appState.footbath ? appState.footbath.completed : false,
+                    walk: appState.walk ? appState.walk.completed : false
+                };
+                // 保存到 localStorage（使用备份的今天数据作为基底，只替换 history 字段）
+                if (_todayBackup) {
+                    const saveState = JSON.parse(JSON.stringify(_todayBackup));
+                    saveState.history = appState.history;
+                    saveState.lastModified = Date.now();
+                    localStorage.setItem(getStorageKey(), JSON.stringify(saveState));
+                }
+                syncToCloud();
+                return;
+            }
             appState.lastModified = Date.now();
             localStorage.setItem(getStorageKey(), JSON.stringify(appState));
             // 触发云同步（防抖）
@@ -2488,59 +2534,79 @@
         }
 
         // 点击日历按钮：直接弹出系统日期选择器
+        // === 自定义日历弹窗 ===
+        let _calYear, _calMonth;
+
         function showHistoryModal() {
-            const dateInput = document.getElementById('history-date-input');
             const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            dateInput.value = `${yyyy}-${mm}-${dd}`;
-            dateInput.max = `${yyyy}-${mm}-${dd}`;
-
-            // 记录打开时的值，用于对比是否真的改了
-            const openValue = dateInput.value;
-
-            // 清除旧的事件监听
-            const newInput = dateInput.cloneNode(true);
-            dateInput.parentNode.replaceChild(newInput, dateInput);
-
-            // 同时监听 change 和 input 事件，兼容不同浏览器
-            function handleDateChange() {
-                const val = newInput.value;
-                if (val && val !== openValue) {
-                    switchToDate(val);
-                } else if (val) {
-                    switchToDate(val);
-                }
-            }
-            newInput.addEventListener('change', handleDateChange);
-            newInput.addEventListener('input', handleDateChange);
-
-            // 强制弹出日期选择器
-            newInput.style.opacity = '0.01';
-            newInput.style.width = '100%';
-            newInput.style.height = '100%';
-            newInput.style.position = 'fixed';
-            newInput.style.top = '0';
-            newInput.style.left = '0';
-            newInput.style.zIndex = '99999';
-            newInput.focus();
-            if (typeof newInput.showPicker === 'function') {
-                try { newInput.showPicker(); } catch(e) {}
-            }
-            newInput.click();
-
-            // 用 blur 事件检测选择器关闭，然后恢复隐藏
-            newInput.addEventListener('blur', function restoreHidden() {
-                newInput.style.opacity = '0';
-                newInput.style.width = '1px';
-                newInput.style.height = '1px';
-                newInput.style.position = 'fixed';
-                newInput.style.top = '50%';
-                newInput.style.left = '50%';
-                newInput.removeEventListener('blur', restoreHidden);
-            });
+            _calYear = today.getFullYear();
+            _calMonth = today.getMonth();
+            renderCalendar();
+            const modal = document.getElementById('calendar-modal');
+            modal.style.display = 'flex';
+            // 点击背景关闭
+            modal.onclick = function(e) {
+                if (e.target === modal) closeCalendar();
+            };
         }
+
+        function closeCalendar() {
+            document.getElementById('calendar-modal').style.display = 'none';
+        }
+
+        function calNav(dir) {
+            _calMonth += dir;
+            if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+            if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const today = new Date();
+            const todayStr = today.toDateString();
+            document.getElementById('cal-title').textContent = `${_calYear}年${_calMonth + 1}月`;
+
+            const firstDay = new Date(_calYear, _calMonth, 1).getDay();
+            const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+            const container = document.getElementById('cal-days');
+            container.innerHTML = '';
+
+            // 填充前置空白
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div');
+                container.appendChild(empty);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const btn = document.createElement('button');
+                btn.textContent = d;
+                const thisDate = new Date(_calYear, _calMonth, d);
+                const isFuture = thisDate > today;
+                const isToday = thisDate.toDateString() === todayStr;
+
+                // 检查是否有打卡记录
+                const hasRecord = appState.history && appState.history[thisDate.toDateString()];
+
+                btn.style.cssText = `
+                    border: none; border-radius: 10px; padding: 10px 0; font-size: 14px; cursor: pointer;
+                    background: ${isToday ? 'linear-gradient(135deg,#667eea,#764ba2)' : hasRecord ? '#e8f5e9' : '#f5f5f5'};
+                    color: ${isToday ? '#fff' : isFuture ? '#ccc' : '#333'};
+                    font-weight: ${isToday ? 'bold' : 'normal'};
+                    ${isFuture ? 'pointer-events:none;' : ''}
+                `;
+
+                if (!isFuture) {
+                    const dateStr = `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    btn.onclick = function() {
+                        closeCalendar();
+                        switchToDate(dateStr);
+                    };
+                }
+                container.appendChild(btn);
+            }
+        }
+
+        function showHistoryModal_legacy() { /* removed */ }
 
         // 切换主页面到指定日期的数据
         function switchToDate(dateStr) {
@@ -2560,6 +2626,7 @@
                     _todayBackup = null;
                 }
                 _viewingHistory = false;
+                _viewingDate = null;
                 // 移除历史模式标记
                 document.querySelector('.container').classList.remove('history-view');
                 const banner = document.getElementById('history-banner');
@@ -2574,27 +2641,37 @@
             }
 
             // 从 history 加载那天的数据
-            if (appState.history[formattedDate]) {
-                const tasks = appState.history[formattedDate];
-                // 把布尔数组映射回 appState 各字段
-                // [喝水, 睡眠, 泡脚, 快走, 三餐, 禁食, 体重, 运动, 晨跑]
-                appState.water = tasks[0] ? 5 : 0;
-                appState.sleep.duration = tasks[1] ? 480 : 0;
+            const hist = appState.history[formattedDate];
+            if (hist) {
+                // 支持新的富数据格式和旧的布尔数组格式
+                const tasks = Array.isArray(hist) ? hist : (hist.tasks || []);
+                appState.water = hist.water != null ? hist.water : (tasks[0] ? 5 : 0);
+                appState.sleep.duration = hist.sleepDuration != null ? hist.sleepDuration * 60 : (tasks[1] ? 480 : 0);
                 appState.sleep.bedTime = tasks[1] ? 1 : null;
                 appState.sleep.wakeTime = tasks[1] ? 2 : null;
-                appState.sleep.onTime = tasks[1];
-                appState.footBath.completed = !!tasks[2];
-                appState.footBath.duration = tasks[2] ? 20 : 0;
-                appState.walking.completed = !!tasks[3];
-                appState.walking.duration = tasks[3] ? 60 : 0;
-                appState.meals.breakfast.checked = !!tasks[4];
-                appState.meals.lunch.checked = !!tasks[4];
-                appState.meals.dinner.checked = !!tasks[4];
-                appState.noEating.completed = !!tasks[5];
-                appState.weight.value = tasks[6] ? (_todayBackup.weight.value || 0) : 0;
-                appState.weight.recorded = !!tasks[6];
-                appState.exercise.count = tasks[7] ? 2 : 0;
-                appState.morningRun.count = tasks[8] ? 2 : 0;
+                appState.sleep.onTime = !!tasks[1];
+                if (appState.footbath) {
+                    appState.footbath.completed = hist.footbath != null ? hist.footbath : !!tasks[2];
+                    appState.footbath.duration = appState.footbath.completed ? 20 : 0;
+                }
+                if (appState.walk) {
+                    appState.walk.completed = hist.walk != null ? hist.walk : !!tasks[3];
+                    appState.walk.duration = appState.walk.completed ? 60 : 0;
+                }
+                if (hist.meals) {
+                    appState.meals = JSON.parse(JSON.stringify(hist.meals));
+                } else {
+                    appState.meals.breakfast.checked = !!tasks[4];
+                    appState.meals.lunch.checked = !!tasks[4];
+                    appState.meals.dinner.checked = !!tasks[4];
+                }
+                appState.noEating.completed = hist.noEating != null ? hist.noEating : !!tasks[5];
+                if (appState.weight) {
+                    appState.weight.value = hist.weight || null;
+                    appState.weight.bmi = hist.bmi || null;
+                }
+                appState.exercise.weekCount = tasks[7] ? 2 : (appState.exercise.weekCount || 0);
+                appState.morningRun.weekCount = tasks[8] ? 2 : (appState.morningRun.weekCount || 0);
             } else {
                 // 没有记录，全部清零
                 appState.water = 0;
@@ -2602,21 +2679,17 @@
                 appState.sleep.bedTime = null;
                 appState.sleep.wakeTime = null;
                 appState.sleep.onTime = false;
-                appState.footBath.completed = false;
-                appState.footBath.duration = 0;
-                appState.walking.completed = false;
-                appState.walking.duration = 0;
+                if (appState.footbath) { appState.footbath.completed = false; appState.footbath.duration = 0; }
+                if (appState.walk) { appState.walk.completed = false; appState.walk.duration = 0; }
                 appState.meals.breakfast.checked = false;
                 appState.meals.lunch.checked = false;
                 appState.meals.dinner.checked = false;
                 appState.noEating.completed = false;
-                appState.weight.value = 0;
-                appState.weight.recorded = false;
-                appState.exercise.count = 0;
-                appState.morningRun.count = 0;
+                if (appState.weight) { appState.weight.value = null; appState.weight.bmi = null; }
             }
 
             _viewingHistory = true;
+            _viewingDate = formattedDate;
 
             // 显示正在查看历史日期的标记
             const displayDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -2628,10 +2701,10 @@
                 const container = document.querySelector('.container');
                 container.insertBefore(banner, container.children[1]);
             }
-            banner.innerHTML = `<span>📅 正在查看 ${displayDate}</span><span onclick="switchToDate('${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}')"
+            banner.innerHTML = `<span>✏️ 编辑中：${displayDate}</span><span onclick="switchToDate('${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}')"
                 style="cursor:pointer;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:8px;font-size:13px;">返回今天</span>`;
 
-            // 禁用所有按钮操作（历史模式只能看，不能改）
+            // 历史模式标记（允许编辑）
             document.querySelector('.container').classList.add('history-view');
 
             updateUI();
