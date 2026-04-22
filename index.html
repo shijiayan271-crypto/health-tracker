@@ -8,7 +8,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>健康习惯监督 v4</title>
+    <title>健康习惯监督 v5</title>
     <style>
         * {
             margin: 0;
@@ -1250,7 +1250,7 @@
     <div class="user-select-screen hidden" id="user-select-screen">
         <div class="user-select-title">选择你的身份</div>
         <div class="user-select-subtitle">每天进步一点点，遇见更好的自己</div>
-        <div style="font-size:11px;color:#bbb;margin-top:4px;">v4 · cloud-sync</div>
+        <div style="font-size:11px;color:#bbb;margin-top:4px;">v5 · cloud-sync</div>
         <div class="user-cards">
             <div class="user-card" onclick="selectUser('tiantian')">
                 <div class="user-card-emoji">🌸</div>
@@ -3122,6 +3122,10 @@
                 if (resp2.ok) {
                     const text = await resp2.text();
                     console.log('Cloud: fetched via raw fallback');
+                    // 尝试后台获取 sha（上传时需要）
+                    if (!fileSha[currentUser]) {
+                        fetchShaOnly(fileName).catch(() => {});
+                    }
                     return JSON.parse(text);
                 }
                 if (resp2.status === 404) return null;
@@ -3137,6 +3141,10 @@
                 if (resp3.ok) {
                     const text = await resp3.text();
                     console.log('Cloud: fetched via jsDelivr CDN fallback');
+                    // 尝试后台获取 sha（上传时需要）
+                    if (!fileSha[currentUser]) {
+                        fetchShaOnly(fileName).catch(() => {});
+                    }
                     return JSON.parse(text);
                 }
                 console.warn('Cloud: jsDelivr CDN returned', resp3.status);
@@ -3144,6 +3152,28 @@
                 console.warn('Cloud: jsDelivr CDN also failed', e3);
             }
             
+            return null;
+        }
+
+        // 后台获取文件 sha（不阻塞主流程，用于后续上传）
+        async function fetchShaOnly(fileName) {
+            try {
+                const ghToken = getGithubToken();
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
+                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
+                    headers: headers,
+                    cache: 'no-store'
+                }, 10000);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    fileSha[currentUser] = data.sha;
+                    console.log('Cloud: sha fetched in background:', data.sha.substring(0, 8));
+                    return data.sha;
+                }
+            } catch (e) {
+                console.warn('Cloud: background sha fetch failed', e);
+            }
             return null;
         }
 
@@ -3174,7 +3204,7 @@
                 }
                 const ghToken = getGithubToken();
                 if (!ghToken) { console.warn('Cloud: no GitHub token'); return false; }
-                const resp = await fetch(`${GITHUB_API}/${fileName}`, {
+                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${ghToken}`,
@@ -3182,7 +3212,7 @@
                         'Accept': 'application/vnd.github.v3+json'
                     },
                     body: JSON.stringify(body)
-                });
+                }, 15000);
                 if (!resp.ok) {
                     if ((resp.status === 409 || resp.status === 422) && retryCount < MAX_RETRIES) {
                         // sha 冲突（GitHub 返回 409 或 422），重新获取最新 sha，合并 history 再试
@@ -3216,16 +3246,24 @@
                 updateSyncUI('syncing');
                 const dataToSync = JSON.parse(JSON.stringify(appState));
                 dataToSync.lastModified = Date.now();
-                const ok = await pushToCloud(dataToSync);
-                isSyncing = false;
-                if (ok) {
-                    updateSyncUI('synced');
-                } else {
-                    if (!navigator.onLine) {
-                        updateSyncUI('offline');
+                try {
+                    const ok = await pushToCloud(dataToSync);
+                    isSyncing = false;
+                    if (ok) {
+                        updateSyncUI('synced');
                     } else {
-                        updateSyncUI('error');
+                        const ghToken = getGithubToken();
+                        if (!navigator.onLine) {
+                            updateSyncUI('offline');
+                        } else if (!ghToken) {
+                            updateSyncUI('error', '无Token');
+                        } else {
+                            updateSyncUI('error', '网络超时');
+                        }
                     }
+                } catch (e) {
+                    isSyncing = false;
+                    updateSyncUI('error', e.message || '未知错误');
                 }
             }, SYNC_DEBOUNCE_MS);
         }
