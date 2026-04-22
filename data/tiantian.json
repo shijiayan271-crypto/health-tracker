@@ -83,7 +83,9 @@
       "total": 9,
       "streak": 0,
       "footbath": true,
+      "footbathDuration": 25,
       "walk": true,
+      "walkDuration": 65,
       "noEating": true
     },
     "Tue Apr 21 2026": {
@@ -91,9 +93,9 @@
         true,
         false,
         false,
-        false,
         true,
-        false,
+        true,
+        true,
         true,
         false,
         false
@@ -102,14 +104,16 @@
       "sleepDuration": null,
       "weight": 73.2,
       "bmi": 28.2,
-      "completed": 3,
-      "dailyCompleted": 3,
+      "completed": 5,
+      "dailyCompleted": 5,
       "dailyTotal": 7,
       "total": 9,
       "streak": 0,
       "footbath": false,
-      "walk": false,
-      "noEating": false
+      "footbathDuration": 0,
+      "walk": true,
+      "walkDuration": 62,
+      "noEating": true
     }
   },
   "lastModified": 1776828712931
