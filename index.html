@@ -1649,6 +1649,19 @@
         function selectUser(userId) {
             currentUser = userId;
             localStorage.setItem('healthTracker_lastUser', userId);
+            
+            // 【修复7】检查是否有 GitHub Token，没有则显示输入框（无痕窗口场景）
+            const token = getGithubToken();
+            if (!token) {
+                document.getElementById('token-prompt').style.display = 'flex';
+                // 不隐藏用户选择屏幕，等输入 token 后再进入
+                return;
+            }
+            
+            enterApp();
+        }
+        
+        function enterApp() {
             document.getElementById('user-select-screen').classList.add('hidden');
             document.getElementById('main-container').style.display = '';
             document.querySelector('.fab').style.display = '';
@@ -1657,6 +1670,18 @@
             checkNewDay();
             updateGreeting();
             updateUI();
+        }
+        
+        function saveManualToken() {
+            const input = document.getElementById('token-input-field');
+            const token = (input.value || '').trim();
+            if (!token) {
+                alert('请输入 GitHub Token');
+                return;
+            }
+            localStorage.setItem('ht_gh_token', token);
+            document.getElementById('token-prompt').style.display = 'none';
+            enterApp();
         }
 
         function updateUserAvatar() {
