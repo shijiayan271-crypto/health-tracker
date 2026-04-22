@@ -1262,7 +1262,7 @@
         </div>
         <!-- 【修复3】Token 输入框（无痕模式时显示） -->
         <div class="token-prompt" id="token-prompt">
-            <div class="token-prompt-text">⚠️ 未检测到 GitHub Token，数据无法同步<br>请通过带 token 的链接访问（格式：url#token=xxx）<br>或在下方粘贴 Token：</div>
+            <div class="token-prompt-text">ℹ️ 当前为只读模式（可查看数据，无法保存修改）<br>粘贴 Token 可开启完整同步：</div>
             <input type="text" class="token-input" id="token-input-field" placeholder="粘贴 GitHub Token...">
             <button class="token-save-btn" onclick="saveManualToken()">保存 Token</button>
         </div>
@@ -1649,19 +1649,6 @@
         function selectUser(userId) {
             currentUser = userId;
             localStorage.setItem('healthTracker_lastUser', userId);
-            
-            // 【修复7】检查是否有 GitHub Token，没有则显示输入框（无痕窗口场景）
-            const token = getGithubToken();
-            if (!token) {
-                document.getElementById('token-prompt').style.display = 'flex';
-                // 不隐藏用户选择屏幕，等输入 token 后再进入
-                return;
-            }
-            
-            enterApp();
-        }
-        
-        function enterApp() {
             document.getElementById('user-select-screen').classList.add('hidden');
             document.getElementById('main-container').style.display = '';
             document.querySelector('.fab').style.display = '';
@@ -1670,6 +1657,13 @@
             checkNewDay();
             updateGreeting();
             updateUI();
+            
+            // 【修复8】无 token 时显示提示，但不阻塞进入（public repo 可以只读同步）
+            const token = getGithubToken();
+            if (!token) {
+                // 显示 token 输入提示（可选，用于开启写入同步）
+                document.getElementById('token-prompt').style.display = 'flex';
+            }
         }
         
         function saveManualToken() {
@@ -1681,7 +1675,8 @@
             }
             localStorage.setItem('ht_gh_token', token);
             document.getElementById('token-prompt').style.display = 'none';
-            enterApp();
+            // 重新同步以获取写入权限
+            syncFromCloud();
         }
 
         function updateUserAvatar() {
@@ -3029,13 +3024,16 @@
             if (!fileName) return null;
             try {
                 const ghToken = getGithubToken();
-                if (!ghToken) { console.warn('Cloud: no GitHub token'); return null; }
+                // 【修复8】public repo 不需要 token 也能读取
+                const headers = {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'If-None-Match': ''
+                };
+                if (ghToken) {
+                    headers['Authorization'] = `Bearer ${ghToken}`;
+                }
                 const resp = await fetch(`${GITHUB_API}/${fileName}`, {
-                    headers: {
-                        'Authorization': `Bearer ${ghToken}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'If-None-Match': '' // 避免缓存
-                    },
+                    headers: headers,
                     cache: 'no-store'
                 });
                 if (!resp.ok) {
