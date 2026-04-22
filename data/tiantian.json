@@ -47,11 +47,11 @@
     "time": 1776837411279
   },
   "exercise": {
-    "weekCount": 0,
-    "type": null,
+    "weekCount": 1,
+    "type": "其他",
     "startTime": null,
-    "duration": 0,
-    "todayCompleted": false
+    "duration": 30,
+    "todayCompleted": true
   },
   "morningRun": {
     "weekCount": 0,
@@ -161,5 +161,5 @@
       "walkDuration": 0
     }
   },
-  "lastModified": 1776838384897
+  "lastModified": 1776841200000
 }
