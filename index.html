@@ -2203,7 +2203,7 @@
             } else if (taskData.startTime) {
                 startBtn.disabled = true;
                 cancelContainer.style.display = 'flex';
-                const minRequired = taskName === 'exercise' ? 40 : 20;
+                const minRequired = taskName === 'exercise' ? 20 : 20;
                 finishBtn.disabled = taskData.duration < minRequired;
             } else {
                 startBtn.disabled = false;
@@ -2239,7 +2239,7 @@
                 const elapsed = Math.floor((Date.now() - appState.exercise.startTime) / 1000);
                 appState.exercise.duration = Math.floor(elapsed / 60);
                 document.getElementById('exercise-timer').textContent = formatTime(elapsed);
-                if (appState.exercise.duration >= 40) {
+                if (appState.exercise.duration >= 20) {
                     document.getElementById('exercise-finish').disabled = false;
                 }
             }
@@ -2449,7 +2449,7 @@
             });
 
             addClickHandler(document.getElementById('exercise-finish'), () => {
-                if (appState.exercise.duration >= 40) {
+                if (appState.exercise.duration >= 20) {
                     appState.exercise.todayCompleted = true;
                     appState.exercise.weekCount++;
                     appState.exercise.startTime = null;
