@@ -743,6 +743,71 @@
             font-weight: 600;
         }
 
+        /* 【修复3】Token 输入框样式（无痕窗口） */
+        .token-prompt {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            max-width: 320px;
+            width: 90%;
+        }
+
+        .token-prompt-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .token-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+            transition: border-color 0.3s;
+            -webkit-appearance: none;
+        }
+
+        .token-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .token-input:focus {
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .token-save-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+        }
+
+        .token-save-btn:active {
+            transform: scale(0.95);
+        }
+
         /* ===== 用户头像按钮 ===== */
         .user-avatar-btn {
             display: inline-flex;
@@ -1194,6 +1259,12 @@
                 <div class="user-card-emoji">🌿</div>
                 <div class="user-card-name">乐乐</div>
             </div>
+        </div>
+        <!-- 【修复3】Token 输入框（无痕模式时显示） -->
+        <div class="token-prompt" id="token-prompt">
+            <div class="token-prompt-text">⚠️ 未检测到 GitHub Token，数据无法同步<br>请通过带 token 的链接访问（格式：url#token=xxx）<br>或在下方粘贴 Token：</div>
+            <input type="text" class="token-input" id="token-input-field" placeholder="粘贴 GitHub Token...">
+            <button class="token-save-btn" onclick="saveManualToken()">保存 Token</button>
         </div>
     </div>
 
@@ -1717,6 +1788,8 @@
                 // 确保 history 存在
                 if (!appState.history) appState.history = {};
             }
+            // 【修复1】加载后重新计算 streak
+            recalcStreak();
             // 尝试从云端同步（异步，不阻塞 UI）
             syncFromCloud();
         }
@@ -1772,7 +1845,7 @@
             ]);
         }
 
-        // 更新连续打卡
+        // 更新连续打卡（旧版，保留兼容）
         function updateStreak() {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
@@ -1780,12 +1853,45 @@
 
             if (appState.history[yesterdayStr]) {
                 const completed = appState.history[yesterdayStr].filter(t => t).length;
-                if (completed >= 5) { // 至少完成5项任务
+                if (completed >= 5) {
                     appState.streak++;
                 } else {
                     appState.streak = 0;
                 }
             }
+        }
+
+        // 【修复1】根据 history 重新计算连续打卡天数
+        // 从昨天开始往前倒推，连续每天 dailyCompleted >= 4 则 streak++
+        function recalcStreak() {
+            let streak = 0;
+            const today = new Date();
+            // 从昨天开始往前推
+            for (let i = 1; i <= 365; i++) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toDateString();
+                const hist = appState.history[dateStr];
+                if (!hist) break; // 没有记录，断了
+
+                // 计算该天的 dailyCompleted
+                let dailyDone = 0;
+                if (typeof hist.dailyCompleted === 'number') {
+                    dailyDone = hist.dailyCompleted;
+                } else if (hist.tasks && Array.isArray(hist.tasks)) {
+                    // 旧格式：tasks 前7项是每日任务
+                    dailyDone = hist.tasks.slice(0, 7).filter(t => t).length;
+                } else if (Array.isArray(hist)) {
+                    dailyDone = hist.slice(0, 7).filter(t => t).length;
+                }
+
+                if (dailyDone >= 4) {
+                    streak++;
+                } else {
+                    break; // 不满足，连续中断
+                }
+            }
+            appState.streak = streak;
         }
 
         // 历史查看模式状态
@@ -2911,11 +3017,22 @@
             }
         }
 
-        // 上传数据到 GitHub
-        async function pushToCloud(data) {
+        // 【修复2】上传数据到 GitHub，带重试计数器防止无限递归
+        async function pushToCloud(data, _retryCount) {
+            const retryCount = _retryCount || 0;
+            const MAX_RETRIES = 2;
             const fileName = getCloudFileName();
             if (!fileName) return false;
             try {
+                // 【修复2】如果没有 sha，先从云端获取（文件可能已存在）
+                if (!fileSha[currentUser]) {
+                    try {
+                        await fetchFromCloud();
+                    } catch (e) {
+                        console.warn('Cloud: pre-fetch sha failed, will try create', e);
+                    }
+                }
+
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
                 const body = {
                     message: `sync ${currentUser} data ${new Date().toISOString().slice(0,16)}`,
@@ -2937,15 +3054,15 @@
                     body: JSON.stringify(body)
                 });
                 if (!resp.ok) {
-                    if (resp.status === 409) {
-                        // sha 冲突，重新获取最新 sha，合并 history 再试
-                        console.warn('Cloud: sha conflict, refetching...');
+                    if ((resp.status === 409 || resp.status === 422) && retryCount < MAX_RETRIES) {
+                        // sha 冲突（GitHub 返回 409 或 422），重新获取最新 sha，合并 history 再试
+                        console.warn(`Cloud: sha conflict (${resp.status}), retry ${retryCount + 1}/${MAX_RETRIES}...`);
                         const cloudData = await fetchFromCloud();
                         if (cloudData && cloudData.history) {
-                            // 合并 history：本地优先（本地是最新操作）
-                            data.history = { ...(cloudData.history || {}), ...(data.history || {}) };
+                            // 使用智能合并
+                            data.history = mergeHistories(data.history || {}, cloudData.history || {});
                         }
-                        return await pushToCloud(data); // 重试一次
+                        return await pushToCloud(data, retryCount + 1);
                     }
                     const errText = await resp.text();
                     console.warn('Cloud: push failed', resp.status, errText);
@@ -2967,7 +3084,8 @@
                 if (isSyncing || !currentUser) return;
                 isSyncing = true;
                 updateSyncUI('syncing');
-                const dataToSync = { ...appState, lastModified: Date.now() };
+                const dataToSync = JSON.parse(JSON.stringify(appState));
+                dataToSync.lastModified = Date.now();
                 const ok = await pushToCloud(dataToSync);
                 isSyncing = false;
                 if (ok) {
@@ -2982,6 +3100,43 @@
             }, SYNC_DEBOUNCE_MS);
         }
 
+        // 【修复4】智能合并 history：每天取 lastModified 更新的版本，没有 lastModified 则取完成度更高的
+        function mergeHistories(localHistory, cloudHistory) {
+            const merged = {};
+            const allDays = new Set([...Object.keys(localHistory), ...Object.keys(cloudHistory)]);
+            allDays.forEach(day => {
+                const local = localHistory[day];
+                const cloud = cloudHistory[day];
+                if (!local) { merged[day] = cloud; return; }
+                if (!cloud) { merged[day] = local; return; }
+                // 两边都有，取更优的那个
+                const localMod = (typeof local === 'object' && !Array.isArray(local)) ? (local.lastModified || 0) : 0;
+                const cloudMod = (typeof cloud === 'object' && !Array.isArray(cloud)) ? (cloud.lastModified || 0) : 0;
+                if (localMod > 0 || cloudMod > 0) {
+                    // 有 lastModified，取更新的
+                    merged[day] = localMod >= cloudMod ? local : cloud;
+                } else {
+                    // 没有 lastModified，取完成度更高的
+                    const localCompleted = (typeof local === 'object' && !Array.isArray(local)) ? (local.dailyCompleted || local.completed || 0) : (Array.isArray(local) ? local.filter(t => t).length : 0);
+                    const cloudCompleted = (typeof cloud === 'object' && !Array.isArray(cloud)) ? (cloud.dailyCompleted || cloud.completed || 0) : (Array.isArray(cloud) ? cloud.filter(t => t).length : 0);
+                    merged[day] = localCompleted >= cloudCompleted ? local : cloud;
+                }
+            });
+            return merged;
+        }
+
+        // 【修复4】智能合并当天数据：取 lastModified 更新的一端
+        function mergeTodayData(localState, cloudState) {
+            const localMod = localState.lastModified || 0;
+            const cloudMod = cloudState.lastModified || 0;
+            // 云端更新，用云端当天数据
+            if (cloudMod > localMod) {
+                return cloudState;
+            }
+            // 本地更新，保留本地当天数据
+            return localState;
+        }
+
         // 从云端同步（页面加载时调用）
         async function syncFromCloud() {
             if (!currentUser) return;
@@ -2990,20 +3145,26 @@
                 const cloudData = await fetchFromCloud();
 
                 if (cloudData && cloudData.lastModified) {
-                    const localModified = appState.lastModified || 0;
-                    if (cloudData.lastModified > localModified) {
-                        // 云端数据更新，使用云端，但合并 history 避免丢失
-                        const localHistory = appState.history || {};
-                        const cloudHistory = cloudData.history || {};
-                        // 合并：云端优先，但保留本地独有的历史天
-                        const mergedHistory = { ...localHistory, ...cloudHistory };
+                    const localHistory = appState.history || {};
+                    const cloudHistory = cloudData.history || {};
+                    // 【修复4】智能合并 history
+                    const mergedHistory = mergeHistories(localHistory, cloudHistory);
+
+                    // 【修复4】智能合并当天数据
+                    const winner = mergeTodayData(appState, cloudData);
+                    // 如果云端更新，用云端数据作为基底
+                    if (winner === cloudData) {
                         appState = cloudData;
-                        appState.history = mergedHistory;
-                        if (!appState.history) appState.history = {};
-                        checkNewDay();
-                        saveDataLocal();
-                        updateUI();
                     }
+                    // 无论哪端赢，都用合并后的 history
+                    appState.history = mergedHistory;
+                    if (!appState.history) appState.history = {};
+
+                    // 【修复1】同步后重新计算 streak
+                    recalcStreak();
+                    checkNewDay();
+                    saveDataLocal();
+                    updateUI();
                 }
                 updateSyncUI('synced');
             } catch (e) {
@@ -3027,8 +3188,42 @@
             if (isSyncing || !currentUser) return;
             isSyncing = true;
             updateSyncUI('syncing');
+            // 【修复】先从云端拉取最新 sha 和数据，合并后再推
+            try {
+                const cloudData = await fetchFromCloud();
+                if (cloudData && cloudData.lastModified) {
+                    const localHistory = appState.history || {};
+                    const cloudHistory = cloudData.history || {};
+                    const mergedHistory = mergeHistories(localHistory, cloudHistory);
+                    const winner = mergeTodayData(appState, cloudData);
+                    if (winner === cloudData) {
+                        // 云端更新，保留云端当天数据但合并 history
+                        const localToday = JSON.parse(JSON.stringify(appState));
+                        appState = cloudData;
+                        // 但保留本地的当天修改（如果本地有新操作）
+                        if (localToday.lastModified > cloudData.lastModified) {
+                            Object.assign(appState, {
+                                water: localToday.water,
+                                sleep: localToday.sleep,
+                                footbath: localToday.footbath,
+                                walk: localToday.walk,
+                                meals: localToday.meals,
+                                noEating: localToday.noEating,
+                                weight: localToday.weight,
+                                exercise: localToday.exercise,
+                                morningRun: localToday.morningRun
+                            });
+                        }
+                    }
+                    appState.history = mergedHistory;
+                    recalcStreak();
+                }
+            } catch (e) {
+                console.warn('Cloud: pre-sync merge failed', e);
+            }
             appState.lastModified = Date.now();
             saveDataLocal();
+            updateUI();
             const ok = await pushToCloud(appState);
             isSyncing = false;
             if (ok) {
@@ -3629,12 +3824,9 @@
                     walkDuration: appState.walk.duration || 0
                 };
 
-                // Update streak - based on daily tasks only (4/7 to maintain streak)
-                if (dailyDone >= 4) {
-                    appState.streak++;
-                } else {
-                    appState.streak = 0;
-                }
+                // Update streak - 用 recalcStreak 从 history 重新计算，避免累加错误
+                // （注意：recalcStreak 会从昨天开始往前推，已经包含了今天刚归档的这一天）
+                recalcStreak();
 
                 // Reset today
                 appState.today = today;
