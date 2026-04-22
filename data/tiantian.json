@@ -1,11 +1,11 @@
 {
-  "today": "Tue Apr 21 2026",
-  "water": 5,
+  "today": "Wed Apr 22 2026",
+  "water": 0,
   "sleep": {
-    "bedTime": 1776786026712,
+    "bedTime": null,
     "wakeTime": null,
     "duration": 0,
-    "onTime": false
+    "onTime": true
   },
   "footbath": {
     "startTime": null,
@@ -13,38 +13,38 @@
     "completed": false
   },
   "walk": {
-    "startTime": 1776771918092,
-    "duration": 62,
-    "completed": true
+    "startTime": null,
+    "duration": 0,
+    "completed": false
   },
   "meals": {
     "breakfast": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776737897144
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "lunch": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776744733667
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "dinner": {
-      "checked": true,
-      "protein": true,
-      "grain": true,
-      "time": 1776771605977
+      "checked": false,
+      "protein": false,
+      "grain": false,
+      "time": null
     }
   },
   "noEating": {
-    "completed": true
+    "completed": false
   },
   "weight": {
-    "value": 73.2,
-    "bmi": 28.2,
-    "category": "Ã¨ÂÂ¥Ã¨ÂÂ",
-    "time": 1776734077010
+    "value": null,
+    "bmi": null,
+    "category": null,
+    "time": null
   },
   "exercise": {
     "weekCount": 0,
@@ -61,5 +61,5 @@
   },
   "streak": 0,
   "history": {},
-  "lastModified": 1776786031714
+  "lastModified": 1776818120481
 }
