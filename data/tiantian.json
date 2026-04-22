@@ -1,6 +1,6 @@
 {
   "today": "Wed Apr 22 2026",
-  "water": 3,
+  "water": 5,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
@@ -22,19 +22,19 @@
       "checked": true,
       "protein": true,
       "grain": true,
-      "time": 1745280900000
+      "time": 1776842813411
     },
     "lunch": {
       "checked": true,
       "protein": true,
       "grain": true,
-      "time": 1745289300000
+      "time": 1776842813914
     },
     "dinner": {
-      "checked": false,
-      "protein": false,
-      "grain": false,
-      "time": 1776690317902
+      "checked": true,
+      "protein": true,
+      "grain": true,
+      "time": 1776842814711
     }
   },
   "noEating": {
@@ -43,14 +43,14 @@
   "weight": {
     "value": 73.2,
     "bmi": 28.2,
-    "category": "è¥è",
+    "category": "ÃÂ¨ÃÂÃÂ¥ÃÂ¨ÃÂÃÂ",
     "time": 1776837411279
   },
   "exercise": {
-    "weekCount": 2,
-    "type": "其他",
+    "weekCount": 1,
+    "type": "Ã¥ÂÂ¶Ã¤Â»Â",
     "startTime": null,
-    "duration": 24,
+    "duration": 30,
     "todayCompleted": true
   },
   "morningRun": {
@@ -59,7 +59,7 @@
     "duration": 0,
     "todayCompleted": false
   },
-  "streak": 3,
+  "streak": 2,
   "history": {
     "Mon Apr 20 2026": {
       "tasks": [
@@ -163,5 +163,5 @@
       "lastModified": 1745308200000
     }
   },
-  "lastModified": 1745308200000
+  "lastModified": 1776844590278
 }
