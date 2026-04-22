@@ -3140,18 +3140,24 @@
         function mergeTodayData(localState, cloudState) {
             const localMod = localState.lastModified || 0;
             const cloudMod = cloudState.lastModified || 0;
-            // 【修复5】智能合并今天数据，不再简单二选一
-            // 以 lastModified 更新的为基底，但用另一端的更高值补充
+            
+            // 【修复6】如果时间差超过30秒，说明是人工/脚本修正，以更新的为权威
+            // 不再用旧数据去"补充"覆盖新数据（防止回填后被本地旧缓存覆盖回去）
+            const timeDiff = Math.abs(cloudMod - localMod);
+            if (timeDiff > 30000) {
+                // 大时间差：以更新的为权威，直接返回
+                return cloudMod > localMod ? cloudState : localState;
+            }
+            
+            // 小时间差（<30秒）：正常的多设备并发编辑，做字段级合并
             const base = cloudMod > localMod ? cloudState : localState;
             const other = cloudMod > localMod ? localState : cloudState;
             
             // 水：取更高值
             if ((other.water || 0) > (base.water || 0)) base.water = other.water;
-            // 运动周次数：取更高值
+            // 运动周次数：取 base（更新端）的值，不用 other 覆盖
+            // 运动 todayCompleted：取已完成的
             if (other.exercise && base.exercise) {
-                if ((other.exercise.weekCount || 0) > (base.exercise.weekCount || 0)) {
-                    base.exercise.weekCount = other.exercise.weekCount;
-                }
                 if (other.exercise.todayCompleted && !base.exercise.todayCompleted) {
                     base.exercise.todayCompleted = true;
                     base.exercise.type = other.exercise.type || base.exercise.type;
@@ -3170,10 +3176,7 @@
                     }
                 });
             }
-            // 体重：取有值的
-            if (other.weight && other.weight.value && (!base.weight || !base.weight.value)) {
-                base.weight = other.weight;
-            }
+            // 体重：取 base（更新端）的值
             // 泡脚/散步：取已完成的
             if (other.footbath && other.footbath.completed && (!base.footbath || !base.footbath.completed)) {
                 base.footbath = other.footbath;
