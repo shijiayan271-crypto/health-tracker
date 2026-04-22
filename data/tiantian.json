@@ -91,7 +91,7 @@
     "Tue Apr 21 2026": {
       "tasks": [
         true,
-        false,
+        true,
         false,
         true,
         true,
@@ -101,11 +101,13 @@
         false
       ],
       "water": 5,
-      "sleepDuration": null,
+      "sleepDuration": 8.8,
+      "sleepBedTime": 1776786000000,
+      "sleepWakeTime": 1776817800000,
       "weight": 73.2,
       "bmi": 28.2,
-      "completed": 5,
-      "dailyCompleted": 5,
+      "completed": 6,
+      "dailyCompleted": 6,
       "dailyTotal": 7,
       "total": 9,
       "streak": 0,
