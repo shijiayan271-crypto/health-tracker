@@ -162,13 +162,15 @@
 
         .water-cups {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             flex: 1;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .water-cup {
-            width: 50px;
-            height: 50px;
+            width: 38px;
+            height: 38px;
             border: 2px solid #667eea;
             border-radius: 8px;
             display: flex;
@@ -176,11 +178,11 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 20px;
+            font-size: 16px;
             /* 移动端触摸优化 */
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
-            min-height: 44px;
+            min-height: 38px;
         }
 
         .water-cup.filled {
@@ -929,8 +931,9 @@
             }
 
             .water-cup {
-                width: 45px;
-                height: 45px;
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
             }
 
             .fab {
@@ -1257,7 +1260,11 @@
                         <div class="water-cup" data-cup="3">💧</div>
                         <div class="water-cup" data-cup="4">💧</div>
                         <div class="water-cup" data-cup="5">💧</div>
+                        <div class="water-cup" data-cup="6">💧</div>
+                        <div class="water-cup" data-cup="7">💧</div>
+                        <div class="water-cup" data-cup="8">💧</div>
                     </div>
+                    <div id="water-label" style="text-align:center;font-size:12px;color:#999;margin-top:4px;"></div>
                 </div>
             </div>
 
@@ -1483,6 +1490,10 @@
                 <div class="chart-section">
                     <div class="chart-title">😴 睡眠趋势</div>
                     <canvas id="chart-sleep"></canvas>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title">🚶 快走 & 🧼 泡脚时长</div>
+                    <canvas id="chart-activity"></canvas>
                 </div>
                 <div class="chart-section">
                     <div class="chart-title">✅ 每日完成率</div>
@@ -1792,6 +1803,9 @@
                     tasks: completionStatus,
                     water: appState.water || 0,
                     sleepDuration: appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null,
+                    sleepBedTime: appState.sleep.bedTime || null,
+                    sleepWakeTime: appState.sleep.wakeTime || null,
+                    sleepOnTime: appState.sleep.onTime,
                     weight: appState.weight && appState.weight.value ? appState.weight.value : null,
                     bmi: appState.weight && appState.weight.bmi ? appState.weight.bmi : null,
                     completed: completionStatus.filter(t => t).length,
@@ -1801,7 +1815,9 @@
                     meals: JSON.parse(JSON.stringify(appState.meals)),
                     noEating: appState.noEating.completed,
                     footbath: appState.footbath ? appState.footbath.completed : false,
-                    walk: appState.walk ? appState.walk.completed : false
+                    footbathDuration: appState.footbath ? (appState.footbath.duration || 0) : 0,
+                    walk: appState.walk ? appState.walk.completed : false,
+                    walkDuration: appState.walk ? (appState.walk.duration || 0) : 0
                 };
                 // 保存到 localStorage（使用备份的今天数据作为基底，只替换 history 字段）
                 if (_todayBackup) {
@@ -1974,12 +1990,19 @@
 
             const card = document.getElementById('water-card');
             const status = document.getElementById('water-status');
-            if (appState.water >= 5) {
+            const label = document.getElementById('water-label');
+            if (appState.water >= 8) {
+                card.classList.add('completed');
+                status.textContent = '🌟';
+                if (label) label.textContent = '🎉 全部喝完！';
+            } else if (appState.water >= 5) {
                 card.classList.add('completed');
                 status.textContent = '✅';
+                if (label) label.textContent = `已合格（${appState.water}/8杯）`;
             } else {
                 card.classList.remove('completed');
                 status.textContent = '⚪';
+                if (label) label.textContent = appState.water > 0 ? `${appState.water}/8杯` : '';
             }
         }
 
@@ -2271,7 +2294,7 @@
                     }
                     updateWaterUI();
                     saveData();
-                    if (appState.water === 5) {
+                    if (appState.water === 5 || appState.water === 8) {
                         showCelebration();
                     }
                 });
@@ -2650,16 +2673,18 @@
                 const tasks = Array.isArray(hist) ? hist : (hist.tasks || []);
                 appState.water = hist.water != null ? hist.water : (tasks[0] ? 5 : 0);
                 appState.sleep.duration = hist.sleepDuration != null ? hist.sleepDuration * 60 : (tasks[1] ? 480 : 0);
-                appState.sleep.bedTime = tasks[1] ? 1 : null;
-                appState.sleep.wakeTime = tasks[1] ? 2 : null;
-                appState.sleep.onTime = !!tasks[1];
+                appState.sleep.bedTime = hist.sleepBedTime || (tasks[1] ? 1 : null);
+                appState.sleep.wakeTime = hist.sleepWakeTime || (tasks[1] ? 2 : null);
+                appState.sleep.onTime = hist.sleepOnTime != null ? hist.sleepOnTime : !!tasks[1];
                 if (appState.footbath) {
                     appState.footbath.completed = hist.footbath != null ? hist.footbath : !!tasks[2];
-                    appState.footbath.duration = appState.footbath.completed ? 20 : 0;
+                    appState.footbath.duration = hist.footbathDuration != null ? hist.footbathDuration : (appState.footbath.completed ? 20 : 0);
+                    appState.footbath.startTime = null; // 历史模式不启动计时器
                 }
                 if (appState.walk) {
                     appState.walk.completed = hist.walk != null ? hist.walk : !!tasks[3];
-                    appState.walk.duration = appState.walk.completed ? 60 : 0;
+                    appState.walk.duration = hist.walkDuration != null ? hist.walkDuration : (appState.walk.completed ? 60 : 0);
+                    appState.walk.startTime = null;
                 }
                 if (hist.meals) {
                     appState.meals = JSON.parse(JSON.stringify(hist.meals));
@@ -3118,6 +3143,8 @@
                     const completed = status.filter(t => t).length;
                     entry.water = appState.water || 0;
                     entry.sleepDuration = appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null;
+                    entry.walkDuration = appState.walk ? (appState.walk.duration || 0) : 0;
+                    entry.footbathDuration = appState.footbath ? (appState.footbath.duration || 0) : 0;
                     entry.weight = appState.weight && appState.weight.value ? appState.weight.value : null;
                     entry.bmi = appState.weight && appState.weight.bmi ? appState.weight.bmi : null;
                     entry.completed = completed;
@@ -3138,6 +3165,8 @@
                     } else {
                         entry.water = hist.water != null ? hist.water : null;
                         entry.sleepDuration = hist.sleepDuration != null ? hist.sleepDuration : null;
+                        entry.walkDuration = hist.walkDuration != null ? hist.walkDuration : null;
+                        entry.footbathDuration = hist.footbathDuration != null ? hist.footbathDuration : null;
                         entry.weight = hist.weight != null ? hist.weight : null;
                         entry.bmi = hist.bmi != null ? hist.bmi : null;
                         entry.completed = hist.completed != null ? hist.completed : null;
@@ -3147,6 +3176,8 @@
                 } else {
                     entry.water = null;
                     entry.sleepDuration = null;
+                    entry.walkDuration = null;
+                    entry.footbathDuration = null;
                     entry.weight = null;
                     entry.bmi = null;
                     entry.completed = null;
@@ -3165,6 +3196,7 @@
             renderWeightBMIChart(data);
             renderWaterChart(data);
             renderSleepChart(data);
+            renderActivityChart(data);
             renderCompletionChart(data);
             renderStreakChart(data);
         }
@@ -3458,6 +3490,22 @@
             });
         }
 
+        function renderActivityChart(data) {
+            const canvas = document.getElementById('chart-activity');
+            const walkVals = data.map(d => d.walkDuration != null ? d.walkDuration : null);
+            const footbathVals = data.map(d => d.footbathDuration != null ? d.footbathDuration : null);
+            const allVals = [...walkVals, ...footbathVals].filter(v => v != null);
+            const maxVal = allVals.length > 0 ? Math.max(...allVals, 60) : 60;
+            drawLineChart(canvas, data, {
+                labels: data.map(d => d.date),
+                yMin: 0, yMax: Math.ceil(maxVal / 10) * 10,
+                datasets: [
+                    { data: walkVals, color: '#4caf50', fill: true, fillColor: 'rgba(76,175,80,0.15)', fillColor2: 'rgba(76,175,80,0.02)', showValues: true },
+                    { data: footbathVals, color: '#ff9800', fill: true, fillColor: 'rgba(255,152,0,0.15)', fillColor2: 'rgba(255,152,0,0.02)', showValues: true }
+                ]
+            });
+        }
+
         function renderCompletionChart(data) {
             const canvas = document.getElementById('chart-completion');
             const pcts = data.map(d => d.completed != null && d.total ? Math.round(d.completed / d.total * 100) : null);
@@ -3532,6 +3580,9 @@
                     tasks: completionStatus,
                     water: appState.water || 0,
                     sleepDuration: appState.sleep.duration ? Math.round(appState.sleep.duration / 60 * 10) / 10 : null,
+                    sleepBedTime: appState.sleep.bedTime || null,
+                    sleepWakeTime: appState.sleep.wakeTime || null,
+                    sleepOnTime: appState.sleep.onTime,
                     weight: appState.weight && appState.weight.value ? appState.weight.value : null,
                     bmi: appState.weight && appState.weight.bmi ? appState.weight.bmi : null,
                     completed: completed,
@@ -3542,7 +3593,9 @@
                     meals: JSON.parse(JSON.stringify(appState.meals)),
                     noEating: appState.noEating.completed,
                     footbath: appState.footbath.completed,
-                    walk: appState.walk.completed
+                    footbathDuration: appState.footbath.duration || 0,
+                    walk: appState.walk.completed,
+                    walkDuration: appState.walk.duration || 0
                 };
 
                 // Update streak - based on daily tasks only (4/7 to maintain streak)
