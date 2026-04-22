@@ -1721,7 +1721,7 @@
             if (urlParams.get('force') === '1') {
                 const lastUser = localStorage.getItem('healthTracker_lastUser');
                 if (lastUser) {
-                    localStorage.removeItem(`healthTracker_${lastUser}`);
+                    localStorage.removeItem(`healthTrackerData_${lastUser}`);
                 }
                 // 清除 URL 参数
                 history.replaceState(null, '', window.location.pathname + window.location.hash);
