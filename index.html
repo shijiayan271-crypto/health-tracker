@@ -1361,7 +1361,7 @@
                     <span class="task-status" id="no-eating-status">⚪</span>
                 </div>
                 <div class="timer-controls">
-                    <button class="timer-btn" id="no-eating-btn" disabled>今天19:30后没有进食</button>
+                    <button class="timer-btn" id="no-eating-btn" disabled onclick="handleNoEatingClick()">今天19:30后没有进食</button>
                 </div>
             </div>
 
@@ -1677,54 +1677,19 @@
             const saved = localStorage.getItem(getStorageKey());
             if (saved) {
                 const data = JSON.parse(saved);
-                // 检查是否是新的一天
-                if (data.today === new Date().toDateString()) {
-                    appState = data;
-                } else {
-                    // 新的一天，保留历史和连续打卡数据
-                    appState.history = data.history || {};
-                    appState.streak = data.streak || 0;
-                    // 保留每周任务的本周数据（如果还在同一周）
-                    if (isSameWeek(new Date(data.today), new Date())) {
-                        appState.exercise.weekCount = data.exercise.weekCount || 0;
-                        appState.morningRun.weekCount = data.morningRun.weekCount || 0;
-                    }
-                    saveData();
-                }
+                // 不管是不是新的一天，先完整加载旧数据
+                // 跨天处理统一交给 checkNewDay()
+                appState = data;
+                // 确保 history 存在
+                if (!appState.history) appState.history = {};
             }
             // 尝试从云端同步（异步，不阻塞 UI）
             syncFromCloud();
         }
 
-        // 检查新一天
+        // 检查新一天（基础版，会被下方增强版覆写）
         function checkNewDay() {
-            const today = new Date().toDateString();
-            if (appState.today !== today) {
-                // 保存昨天的数据到历史
-                const yesterday = new Date(appState.today);
-                appState.history[appState.today] = getCompletionStatus();
-
-                // 更新连续打卡
-                updateStreak();
-
-                // 重置今日数据
-                appState.today = today;
-                appState.water = 0;
-                appState.sleep = { bedTime: null, wakeTime: null, duration: 0, onTime: true };
-                appState.footbath = { startTime: null, duration: 0, completed: false };
-                appState.walk = { startTime: null, duration: 0, completed: false };
-                appState.meals = {
-                    breakfast: { checked: false, protein: false, grain: false, time: null },
-                    lunch: { checked: false, protein: false, grain: false, time: null },
-                    dinner: { checked: false, protein: false, grain: false, time: null }
-                };
-                appState.noEating = { completed: false };
-                appState.weight = { value: null, bmi: null, category: null, time: null };
-                appState.exercise.todayCompleted = false;
-                appState.morningRun.todayCompleted = false;
-
-                saveData();
-            }
+            // 被下方增强版覆写，此函数不会被调用
         }
 
         // 判断是否同一周
@@ -2377,13 +2342,9 @@
                 });
             });
 
-            // 19:30后禁食
+            // 19:30后禁食 - 也通过 onclick="handleNoEatingClick()" 绑定了
             addClickHandler(document.getElementById('no-eating-btn'), () => {
-                appState.noEating.completed = true;
-                updateNoEatingUI();
-                saveData();
-                updateUI();
-                showCelebration();
+                handleNoEatingClick();
             });
 
             // 运动类型选择
@@ -3388,6 +3349,10 @@
         checkNewDay = function() {
             const today = new Date().toDateString();
             if (appState.today !== today) {
+                // 【修复1】如果昨晚点了"准备睡觉"但还没起床，保留 sleep 数据
+                const pendingSleep = appState.sleep.bedTime && !appState.sleep.wakeTime;
+                const savedSleep = pendingSleep ? JSON.parse(JSON.stringify(appState.sleep)) : null;
+
                 // Save rich history for the old day
                 const completionStatus = getCompletionStatus();
                 const dailyStatus = getDailyCompletionStatus();
@@ -3403,7 +3368,11 @@
                     dailyCompleted: dailyDone,
                     dailyTotal: 7,
                     total: completionStatus.length,
-                    streak: appState.streak
+                    streak: appState.streak,
+                    meals: JSON.parse(JSON.stringify(appState.meals)),
+                    noEating: appState.noEating.completed,
+                    footbath: appState.footbath.completed,
+                    walk: appState.walk.completed
                 };
 
                 // Update streak - based on daily tasks only (4/7 to maintain streak)
@@ -3416,7 +3385,12 @@
                 // Reset today
                 appState.today = today;
                 appState.water = 0;
-                appState.sleep = { bedTime: null, wakeTime: null, duration: 0, onTime: true };
+                // 【修复1续】如果有未完成的睡眠，保留 bedTime 让用户可以起床打卡
+                if (savedSleep) {
+                    appState.sleep = savedSleep;
+                } else {
+                    appState.sleep = { bedTime: null, wakeTime: null, duration: 0, onTime: true };
+                }
                 appState.footbath = { startTime: null, duration: 0, completed: false };
                 appState.walk = { startTime: null, duration: 0, completed: false };
                 appState.meals = {
@@ -3452,6 +3426,16 @@
                 checkNewDay();
             }
         });
+
+        // 禁食打卡全局函数（同时支持 onclick 和 addEventListener）
+        function handleNoEatingClick() {
+            if (appState.noEating.completed) return; // 已完成不重复处理
+            appState.noEating.completed = true;
+            updateNoEatingUI();
+            saveData();
+            updateUI();
+            showCelebration();
+        }
 
         // 启动应用
         init();
