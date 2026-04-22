@@ -1716,6 +1716,17 @@
 
         // 初始化
         function init() {
+            // 【修复】URL 带 ?force=1 时清除本地缓存，强制从云端拉取
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('force') === '1') {
+                const lastUser = localStorage.getItem('healthTracker_lastUser');
+                if (lastUser) {
+                    localStorage.removeItem(`healthTracker_${lastUser}`);
+                }
+                // 清除 URL 参数
+                history.replaceState(null, '', window.location.pathname + window.location.hash);
+            }
+
             // 检查是否有已记住的用户
             const lastUser = localStorage.getItem('healthTracker_lastUser');
             if (lastUser && USERS[lastUser]) {
@@ -1813,7 +1824,7 @@
         function getDailyCompletionStatus() {
             return [
                 appState.water >= 5,
-                appState.sleep.duration >= 8,
+                appState.sleep.duration >= 480,
                 appState.footbath.completed,
                 appState.walk.completed,
                 appState.meals.breakfast.checked && appState.meals.lunch.checked && appState.meals.dinner.checked,
