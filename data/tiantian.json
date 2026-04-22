@@ -1,6 +1,6 @@
 {
   "today": "Wed Apr 22 2026",
-  "water": 5,
+  "water": 0,
   "sleep": {
     "bedTime": null,
     "wakeTime": null,
@@ -13,45 +13,45 @@
     "completed": false
   },
   "walk": {
-    "startTime": 1776837418277,
+    "startTime": null,
     "duration": 0,
     "completed": false
   },
   "meals": {
     "breakfast": {
       "checked": false,
-      "protein": true,
-      "grain": true,
-      "time": 1776690315017
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "lunch": {
       "checked": false,
-      "protein": true,
-      "grain": true,
-      "time": 1776690316451
+      "protein": false,
+      "grain": false,
+      "time": null
     },
     "dinner": {
       "checked": false,
-      "protein": true,
-      "grain": true,
-      "time": 1776690317902
+      "protein": false,
+      "grain": false,
+      "time": null
     }
   },
   "noEating": {
     "completed": false
   },
   "weight": {
-    "value": 73.2,
-    "bmi": 28.2,
-    "category": "肥胖",
-    "time": 1776837411279
+    "value": null,
+    "bmi": null,
+    "category": null,
+    "time": null
   },
   "exercise": {
-    "weekCount": 0,
+    "weekCount": 1,
     "type": null,
     "startTime": null,
-    "duration": 0,
-    "todayCompleted": false
+    "duration": 24,
+    "todayCompleted": true
   },
   "morningRun": {
     "weekCount": 0,
@@ -59,66 +59,16 @@
     "duration": 0,
     "todayCompleted": false
   },
-  "streak": 1,
+  "streak": 0,
   "history": {
     "Mon Apr 20 2026": {
       "tasks": [
         true,
         false,
-        false,
         true,
         true,
         true,
-        false,
-        false,
-        false
-      ],
-      "water": 5,
-      "sleepDuration": null,
-      "sleepBedTime": null,
-      "sleepWakeTime": null,
-      "sleepOnTime": true,
-      "weight": null,
-      "bmi": null,
-      "completed": 4,
-      "dailyCompleted": 4,
-      "dailyTotal": 7,
-      "total": 9,
-      "streak": 0,
-      "meals": {
-        "breakfast": {
-          "checked": true,
-          "protein": true,
-          "grain": true,
-          "time": 1776690315017
-        },
-        "lunch": {
-          "checked": true,
-          "protein": true,
-          "grain": true,
-          "time": 1776690316451
-        },
-        "dinner": {
-          "checked": true,
-          "protein": true,
-          "grain": true,
-          "time": 1776690317902
-        }
-      },
-      "noEating": true,
-      "footbath": false,
-      "footbathDuration": 0,
-      "walk": true,
-      "walkDuration": 65
-    },
-    "Tue Apr 21 2026": {
-      "tasks": [
         true,
-        false,
-        false,
-        false,
-        false,
-        false,
         true,
         false,
         false
@@ -128,38 +78,89 @@
       "sleepBedTime": null,
       "sleepWakeTime": null,
       "sleepOnTime": false,
-      "weight": 73.2,
-      "bmi": 28.2,
-      "completed": 2,
-      "dailyCompleted": 2,
+      "weight": 74,
+      "bmi": 28.5,
+      "completed": 5,
+      "dailyCompleted": 5,
       "dailyTotal": 7,
       "total": 9,
+      "streak": 0,
       "meals": {
         "breakfast": {
-          "checked": false,
-          "protein": true,
-          "grain": true,
-          "time": 1776690315017
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
         },
         "lunch": {
-          "checked": false,
-          "protein": true,
-          "grain": true,
-          "time": 1776690316451
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
         },
         "dinner": {
-          "checked": false,
-          "protein": true,
-          "grain": true,
-          "time": 1776690317902
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
         }
       },
-      "noEating": false,
+      "noEating": true,
+      "footbath": true,
+      "footbathDuration": 25,
+      "walk": true,
+      "walkDuration": 65
+    },
+    "Tue Apr 21 2026": {
+      "tasks": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "water": 5,
+      "sleepDuration": 8.8,
+      "sleepBedTime": 1776786000000,
+      "sleepWakeTime": 1776817800000,
+      "sleepOnTime": true,
+      "weight": 73.2,
+      "bmi": 28.2,
+      "completed": 6,
+      "dailyCompleted": 6,
+      "dailyTotal": 7,
+      "total": 9,
+      "streak": 0,
+      "meals": {
+        "breakfast": {
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
+        },
+        "lunch": {
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
+        },
+        "dinner": {
+          "checked": true,
+          "protein": false,
+          "grain": false,
+          "time": null
+        }
+      },
+      "noEating": true,
       "footbath": false,
       "footbathDuration": 0,
-      "walk": false,
-      "walkDuration": 0
+      "walk": true,
+      "walkDuration": 62
     }
   },
-  "lastModified": 1776837423280
+  "lastModified": 1776837750657
 }

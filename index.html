@@ -2938,9 +2938,13 @@
                 });
                 if (!resp.ok) {
                     if (resp.status === 409) {
-                        // sha 冲突，重新获取最新 sha 再试
+                        // sha 冲突，重新获取最新 sha，合并 history 再试
                         console.warn('Cloud: sha conflict, refetching...');
-                        await fetchFromCloud();
+                        const cloudData = await fetchFromCloud();
+                        if (cloudData && cloudData.history) {
+                            // 合并 history：本地优先（本地是最新操作）
+                            data.history = { ...(cloudData.history || {}), ...(data.history || {}) };
+                        }
                         return await pushToCloud(data); // 重试一次
                     }
                     const errText = await resp.text();
@@ -2988,8 +2992,14 @@
                 if (cloudData && cloudData.lastModified) {
                     const localModified = appState.lastModified || 0;
                     if (cloudData.lastModified > localModified) {
-                        // 云端数据更新，使用云端
+                        // 云端数据更新，使用云端，但合并 history 避免丢失
+                        const localHistory = appState.history || {};
+                        const cloudHistory = cloudData.history || {};
+                        // 合并：云端优先，但保留本地独有的历史天
+                        const mergedHistory = { ...localHistory, ...cloudHistory };
                         appState = cloudData;
+                        appState.history = mergedHistory;
+                        if (!appState.history) appState.history = {};
                         checkNewDay();
                         saveDataLocal();
                         updateUI();
