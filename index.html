@@ -1250,7 +1250,7 @@
     <div class="user-select-screen hidden" id="user-select-screen">
         <div class="user-select-title">选择你的身份</div>
         <div class="user-select-subtitle">每天进步一点点，遇见更好的自己</div>
-        <div style="font-size:11px;color:#bbb;margin-top:4px;">v5 · cloud-sync</div>
+        <div style="font-size:11px;color:#bbb;margin-top:4px;">v7 · local-deploy</div>
         <div class="user-cards">
             <div class="user-card" onclick="selectUser('tiantian')">
                 <div class="user-card-emoji">🌸</div>
@@ -1262,10 +1262,10 @@
             </div>
         </div>
         <!-- 【修复3】Token 输入框（无痕模式时显示） -->
-        <div class="token-prompt" id="token-prompt">
-            <div class="token-prompt-text">ℹ️ 当前为只读模式（可查看数据，无法保存修改）<br>粘贴 Token 可开启完整同步：</div>
-            <input type="text" class="token-input" id="token-input-field" placeholder="粘贴 GitHub Token...">
-            <button class="token-save-btn" onclick="saveManualToken()">保存 Token</button>
+        <div class="token-prompt" id="pin-prompt">
+            <div class="token-prompt-text">🔐 输入 PIN 码开启数据同步：</div>
+            <input type="password" class="token-input" id="pin-input-field" placeholder="4位数字 PIN" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+            <button class="token-save-btn" onclick="savePin()">确认</button>
         </div>
     </div>
 
@@ -1714,23 +1714,23 @@
             updateGreeting();
             updateUI();
             
-            // 【修复8】无 token 时显示提示，但不阻塞进入（public repo 可以只读同步）
-            const token = getGithubToken();
-            if (!token) {
-                document.getElementById('token-prompt').style.display = 'flex';
+            // 无 PIN 时显示提示，但不阻塞进入（可以只读）
+            const pin = getSyncPin();
+            if (!pin) {
+                document.getElementById('pin-prompt').style.display = 'flex';
             }
         }
         
-        function saveManualToken() {
-            const input = document.getElementById('token-input-field');
-            const token = (input.value || '').trim();
-            if (!token) {
-                alert('请输入 GitHub Token');
+        function savePin() {
+            const input = document.getElementById('pin-input-field');
+            const pin = (input.value || '').trim();
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                alert('请输入 4 位数字 PIN');
                 return;
             }
-            localStorage.setItem('ht_gh_token', token);
-            document.getElementById('token-prompt').style.display = 'none';
-            // 重新同步以获取写入权限
+            localStorage.setItem('ht_sync_pin', pin);
+            document.getElementById('pin-prompt').style.display = 'none';
+            // 重新同步
             syncFromCloud();
         }
 
@@ -2999,34 +2999,109 @@
         }
 
         // ===== 云同步模块 =====
-        // ===== GitHub API 云同步 =====
-        // Token 通过 URL hash 传入，格式: #token=xxx
-        const GITHUB_REPO = 'shijiayan271-crypto/health-tracker';
-        const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/contents/data`;
-        function getGithubToken() {
-            // 优先从 URL hash 获取
-            const hash = window.location.hash;
-            const match = hash.match(/token=([^&]+)/);
-            if (match) {
-                // 存入 localStorage 以便下次自动使用
-                localStorage.setItem('ht_gh_token', match[1]);
-                // 清除 URL 中的 token（安全）
-                history.replaceState(null, '', window.location.pathname + window.location.search);
-                return match[1];
+        // ===== 本地服务器同步 =====
+        // 自动检测：如果从本地服务器访问，用当前地址；否则用配置的地址
+        const SYNC_API = (function() {
+            const loc = window.location;
+            // 本地部署模式：直接用当前页面的 origin + /api
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1' || /^192\.168\./.test(loc.hostname) || /^10\./.test(loc.hostname)) {
+                return loc.origin + '/api';
             }
-            // 从 localStorage 获取
-            return localStorage.getItem('ht_gh_token');
+            // 远程模式（GitHub Pages 等）：用配置的服务器地址
+            const saved = localStorage.getItem('ht_sync_server');
+            if (saved) return saved;
+            return loc.origin + '/api';
+        })();
+        function getSyncPin() {
+            return localStorage.getItem('ht_sync_pin');
         }
         let syncDebounceTimer = null;
-        const SYNC_DEBOUNCE_MS = 5000;
+        const SYNC_DEBOUNCE_MS = 3000;
         let isSyncing = false;
         let lastSyncTime = null;
-        let fileSha = {}; // 缓存文件 sha，更新时需要
 
-        // 获取当前用户的数据文件路径
-        function getCloudFileName() {
-            if (!currentUser) return null;
-            return `${currentUser}.json`;
+        // ===== IndexedDB 双写存储 =====
+        const IDB_NAME = 'healthTracker';
+        const IDB_VERSION = 1;
+        let idb = null;
+
+        function openIDB() {
+            return new Promise((resolve, reject) => {
+                if (idb) { resolve(idb); return; }
+                const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('userData')) {
+                        db.createObjectStore('userData', { keyPath: 'userId' });
+                    }
+                    if (!db.objectStoreNames.contains('syncQueue')) {
+                        db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+                req.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+                req.onerror = (e) => { console.warn('IDB open failed', e); resolve(null); };
+            });
+        }
+
+        async function saveToIDB(userId, data) {
+            try {
+                const db = await openIDB();
+                if (!db) return;
+                const tx = db.transaction('userData', 'readwrite');
+                tx.objectStore('userData').put({ userId, data, savedAt: Date.now() });
+            } catch (e) { console.warn('IDB save failed', e); }
+        }
+
+        async function loadFromIDB(userId) {
+            try {
+                const db = await openIDB();
+                if (!db) return null;
+                return new Promise((resolve) => {
+                    const tx = db.transaction('userData', 'readonly');
+                    const req = tx.objectStore('userData').get(userId);
+                    req.onsuccess = () => resolve(req.result ? req.result.data : null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (e) { console.warn('IDB load failed', e); return null; }
+        }
+
+        // ===== 重试队列 =====
+        async function addToSyncQueue(userId, data) {
+            try {
+                const db = await openIDB();
+                if (!db) return;
+                const tx = db.transaction('syncQueue', 'readwrite');
+                // 清除该用户旧的队列项（只保留最新一条）
+                const store = tx.objectStore('syncQueue');
+                const allReq = store.getAll();
+                allReq.onsuccess = () => {
+                    const items = allReq.result || [];
+                    items.forEach(item => {
+                        if (item.userId === userId) store.delete(item.id);
+                    });
+                    store.add({ userId, data, createdAt: Date.now() });
+                };
+            } catch (e) { console.warn('Queue add failed', e); }
+        }
+
+        async function processSyncQueue() {
+            try {
+                const db = await openIDB();
+                if (!db) return;
+                const tx = db.transaction('syncQueue', 'readonly');
+                const req = tx.objectStore('syncQueue').getAll();
+                req.onsuccess = async () => {
+                    const items = req.result || [];
+                    for (const item of items) {
+                        const ok = await pushToCloud(item.data, item.userId);
+                        if (ok) {
+                            const delTx = db.transaction('syncQueue', 'readwrite');
+                            delTx.objectStore('syncQueue').delete(item.id);
+                            console.log('Queue: retried and synced', item.userId);
+                        }
+                    }
+                };
+            } catch (e) { console.warn('Queue process failed', e); }
         }
 
         // 更新同步状态 UI
@@ -3073,166 +3148,71 @@
             return `${h}:${m}`;
         }
 
-        // 从 GitHub 获取数据
         // 带超时的 fetch 封装
         function fetchWithTimeout(url, options, timeoutMs) {
-            timeoutMs = timeoutMs || 8000;
+            timeoutMs = timeoutMs || 10000;
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), timeoutMs);
             return fetch(url, Object.assign({}, options, { signal: controller.signal }))
                 .finally(() => clearTimeout(timer));
         }
 
+        // 从 Worker 读取云端数据
         async function fetchFromCloud() {
-            const fileName = getCloudFileName();
-            if (!fileName) return null;
-            
-            // 方式1: GitHub API（可获取 sha，用于后续写入）
+            if (!currentUser) return null;
             try {
-                const ghToken = getGithubToken();
-                const headers = {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'If-None-Match': ''
-                };
-                if (ghToken) {
-                    headers['Authorization'] = `Bearer ${ghToken}`;
-                }
-                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
-                    headers: headers,
-                    cache: 'no-store'
-                }, 8000);
-                if (resp.ok) {
-                    const fileData = await resp.json();
-                    fileSha[currentUser] = fileData.sha;
-                    const content = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
-                    console.log('Cloud: fetched via GitHub API');
-                    return JSON.parse(content);
-                }
-                if (resp.status === 404) return null;
-                // API 失败（可能速率限制），fall through 到备用方式
-                console.warn('Cloud: GitHub API returned', resp.status, '- trying raw fallback');
-            } catch (e) {
-                console.warn('Cloud: GitHub API fetch failed', e.name === 'AbortError' ? '(timeout 8s)' : e, '- trying raw fallback');
-            }
-            
-            // 方式2: raw.githubusercontent.com 备用通道（不受 API 速率限制）
-            try {
-                const rawUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/data/${fileName}?t=${Date.now()}`;
-                const resp2 = await fetchWithTimeout(rawUrl, { cache: 'no-store' }, 8000);
-                if (resp2.ok) {
-                    const text = await resp2.text();
-                    console.log('Cloud: fetched via raw fallback');
-                    // 尝试后台获取 sha（上传时需要）
-                    if (!fileSha[currentUser]) {
-                        fetchShaOnly(fileName).catch(() => {});
-                    }
-                    return JSON.parse(text);
-                }
-                if (resp2.status === 404) return null;
-                console.warn('Cloud: raw fallback returned', resp2.status);
-            } catch (e2) {
-                console.warn('Cloud: raw fallback also failed', e2);
-            }
-            
-            // 方式3: jsDelivr CDN 备用通道（中国大陆可访问，有一定缓存延迟）
-            try {
-                const cdnUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@main/data/${fileName}`;
-                const resp3 = await fetchWithTimeout(cdnUrl, { cache: 'no-store' }, 8000);
-                if (resp3.ok) {
-                    const text = await resp3.text();
-                    console.log('Cloud: fetched via jsDelivr CDN fallback');
-                    // 尝试后台获取 sha（上传时需要）
-                    if (!fileSha[currentUser]) {
-                        fetchShaOnly(fileName).catch(() => {});
-                    }
-                    return JSON.parse(text);
-                }
-                console.warn('Cloud: jsDelivr CDN returned', resp3.status);
-            } catch (e3) {
-                console.warn('Cloud: jsDelivr CDN also failed', e3);
-            }
-            
-            return null;
-        }
-
-        // 后台获取文件 sha（不阻塞主流程，用于后续上传）
-        async function fetchShaOnly(fileName) {
-            try {
-                const ghToken = getGithubToken();
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
-                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
-                    headers: headers,
+                const resp = await fetchWithTimeout(`${SYNC_API}/data/${currentUser}`, {
                     cache: 'no-store'
                 }, 10000);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    fileSha[currentUser] = data.sha;
-                    console.log('Cloud: sha fetched in background:', data.sha.substring(0, 8));
-                    return data.sha;
-                }
-            } catch (e) {
-                console.warn('Cloud: background sha fetch failed', e);
-            }
-            return null;
-        }
-
-        // 【修复2】上传数据到 GitHub，带重试计数器防止无限递归
-        async function pushToCloud(data, _retryCount) {
-            const retryCount = _retryCount || 0;
-            const MAX_RETRIES = 2;
-            const fileName = getCloudFileName();
-            if (!fileName) return false;
-            try {
-                // 【修复2】如果没有 sha，先从云端获取（文件可能已存在）
-                if (!fileSha[currentUser]) {
-                    try {
-                        await fetchFromCloud();
-                    } catch (e) {
-                        console.warn('Cloud: pre-fetch sha failed, will try create', e);
-                    }
-                }
-
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-                const body = {
-                    message: `sync ${currentUser} data ${new Date().toISOString().slice(0,16)}`,
-                    content: content
-                };
-                // 更新已有文件需要 sha
-                if (fileSha[currentUser]) {
-                    body.sha = fileSha[currentUser];
-                }
-                const ghToken = getGithubToken();
-                if (!ghToken) { console.warn('Cloud: no GitHub token'); return false; }
-                const resp = await fetchWithTimeout(`${GITHUB_API}/${fileName}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${ghToken}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    body: JSON.stringify(body)
-                }, 15000);
                 if (!resp.ok) {
-                    if ((resp.status === 409 || resp.status === 422) && retryCount < MAX_RETRIES) {
-                        // sha 冲突（GitHub 返回 409 或 422），重新获取最新 sha，合并 history 再试
-                        console.warn(`Cloud: sha conflict (${resp.status}), retry ${retryCount + 1}/${MAX_RETRIES}...`);
-                        const cloudData = await fetchFromCloud();
-                        if (cloudData && cloudData.history) {
-                            // 使用智能合并
-                            data.history = mergeHistories(data.history || {}, cloudData.history || {});
-                        }
-                        return await pushToCloud(data, retryCount + 1);
-                    }
-                    const errText = await resp.text();
-                    console.warn('Cloud: push failed', resp.status, errText);
-                    throw new Error(`HTTP ${resp.status}`);
+                    console.warn('Cloud: fetch failed', resp.status);
+                    return null;
                 }
                 const result = await resp.json();
-                fileSha[currentUser] = result.content.sha;
+                if (!result.exists) return null;
+                console.log('Cloud: fetched from Worker');
+                return result.data;
+            } catch (e) {
+                console.warn('Cloud: fetch failed', e.name === 'AbortError' ? '(timeout)' : e);
+                return null;
+            }
+        }
+
+        // 推送数据到 Worker
+        async function pushToCloud(data, userId) {
+            const uid = userId || currentUser;
+            if (!uid) return false;
+            const pin = getSyncPin();
+            if (!pin) {
+                console.warn('Cloud: no PIN configured');
+                return false;
+            }
+            try {
+                const resp = await fetchWithTimeout(`${SYNC_API}/data/${uid}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Pin': pin
+                    },
+                    body: JSON.stringify(data)
+                }, 15000);
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    if (resp.status === 401) {
+                        console.warn('Cloud: PIN 验证失败');
+                        throw new Error('PIN错误');
+                    }
+                    console.warn('Cloud: push failed', resp.status, errData);
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                console.log('Cloud: pushed to Worker');
                 return true;
             } catch (e) {
                 console.warn('Cloud: push failed', e);
+                // 同步失败 → 加入重试队列
+                if (userId === undefined) {
+                    addToSyncQueue(uid, data);
+                }
                 return false;
             }
         }
@@ -3252,13 +3232,12 @@
                     if (ok) {
                         updateSyncUI('synced');
                     } else {
-                        const ghToken = getGithubToken();
                         if (!navigator.onLine) {
                             updateSyncUI('offline');
-                        } else if (!ghToken) {
-                            updateSyncUI('error', '无Token');
+                        } else if (!getSyncPin()) {
+                            updateSyncUI('error', '无PIN');
                         } else {
-                            updateSyncUI('error', '网络超时');
+                            updateSyncUI('error', '同步失败');
                         }
                     }
                 } catch (e) {
@@ -3268,7 +3247,7 @@
             }, SYNC_DEBOUNCE_MS);
         }
 
-        // 【修复4】智能合并 history：每天取 lastModified 更新的版本，没有 lastModified 则取完成度更高的
+        // 智能合并 history
         function mergeHistories(localHistory, cloudHistory) {
             const merged = {};
             const allDays = new Set([...Object.keys(localHistory), ...Object.keys(cloudHistory)]);
@@ -3277,14 +3256,11 @@
                 const cloud = cloudHistory[day];
                 if (!local) { merged[day] = cloud; return; }
                 if (!cloud) { merged[day] = local; return; }
-                // 两边都有，取更优的那个
                 const localMod = (typeof local === 'object' && !Array.isArray(local)) ? (local.lastModified || 0) : 0;
                 const cloudMod = (typeof cloud === 'object' && !Array.isArray(cloud)) ? (cloud.lastModified || 0) : 0;
                 if (localMod > 0 || cloudMod > 0) {
-                    // 有 lastModified，取更新的
                     merged[day] = localMod >= cloudMod ? local : cloud;
                 } else {
-                    // 没有 lastModified，取完成度更高的
                     const localCompleted = (typeof local === 'object' && !Array.isArray(local)) ? (local.dailyCompleted || local.completed || 0) : (Array.isArray(local) ? local.filter(t => t).length : 0);
                     const cloudCompleted = (typeof cloud === 'object' && !Array.isArray(cloud)) ? (cloud.dailyCompleted || cloud.completed || 0) : (Array.isArray(cloud) ? cloud.filter(t => t).length : 0);
                     merged[day] = localCompleted >= cloudCompleted ? local : cloud;
@@ -3293,27 +3269,17 @@
             return merged;
         }
 
-        // 【修复4】智能合并当天数据：取 lastModified 更新的一端
+        // 智能合并当天数据
         function mergeTodayData(localState, cloudState) {
             const localMod = localState.lastModified || 0;
             const cloudMod = cloudState.lastModified || 0;
-            
-            // 【修复6】如果时间差超过30秒，说明是人工/脚本修正，以更新的为权威
-            // 不再用旧数据去"补充"覆盖新数据（防止回填后被本地旧缓存覆盖回去）
             const timeDiff = Math.abs(cloudMod - localMod);
             if (timeDiff > 30000) {
-                // 大时间差：以更新的为权威，直接返回
                 return cloudMod > localMod ? cloudState : localState;
             }
-            
-            // 小时间差（<30秒）：正常的多设备并发编辑，做字段级合并
             const base = cloudMod > localMod ? cloudState : localState;
             const other = cloudMod > localMod ? localState : cloudState;
-            
-            // 水：取更高值
             if ((other.water || 0) > (base.water || 0)) base.water = other.water;
-            // 运动周次数：取 base（更新端）的值，不用 other 覆盖
-            // 运动 todayCompleted：取已完成的
             if (other.exercise && base.exercise) {
                 if (other.exercise.todayCompleted && !base.exercise.todayCompleted) {
                     base.exercise.todayCompleted = true;
@@ -3321,11 +3287,9 @@
                     base.exercise.duration = other.exercise.duration || base.exercise.duration;
                 }
             }
-            // 睡眠：取有数据的那个
             if (other.sleep && other.sleep.duration > 0 && (!base.sleep || base.sleep.duration === 0)) {
                 base.sleep = other.sleep;
             }
-            // 三餐：取已打卡的
             if (other.meals && base.meals) {
                 ['breakfast', 'lunch', 'dinner'].forEach(meal => {
                     if (other.meals[meal] && other.meals[meal].checked && (!base.meals[meal] || !base.meals[meal].checked)) {
@@ -3333,15 +3297,12 @@
                     }
                 });
             }
-            // 体重：取 base（更新端）的值
-            // 泡脚/散步：取已完成的
             if (other.footbath && other.footbath.completed && (!base.footbath || !base.footbath.completed)) {
                 base.footbath = other.footbath;
             }
             if (other.walk && other.walk.completed && (!base.walk || !base.walk.completed)) {
                 base.walk = other.walk;
             }
-            // 过午不食：取已完成的
             if (other.noEating && other.noEating.completed && (!base.noEating || !base.noEating.completed)) {
                 base.noEating = other.noEating;
             }
@@ -3354,27 +3315,22 @@
             updateSyncUI('syncing');
             try {
                 const cloudData = await fetchFromCloud();
-
                 if (cloudData && cloudData.lastModified) {
                     const localHistory = appState.history || {};
                     const cloudHistory = cloudData.history || {};
-                    // 【修复4】智能合并 history
                     const mergedHistory = mergeHistories(localHistory, cloudHistory);
-
-                    // 【修复5】智能合并当天数据（不再二选一，而是字段级合并）
                     const merged = mergeTodayData(appState, cloudData);
                     appState = merged;
-                    // 无论如何都用合并后的 history
                     appState.history = mergedHistory;
                     if (!appState.history) appState.history = {};
-
-                    // 【修复1】同步后重新计算 streak
                     recalcStreak();
                     checkNewDay();
                     saveDataLocal();
                     updateUI();
                 }
                 updateSyncUI('synced');
+                // 页面加载时处理重试队列
+                processSyncQueue();
             } catch (e) {
                 console.warn('Cloud: sync from cloud failed', e);
                 if (!navigator.onLine) {
@@ -3385,25 +3341,28 @@
             }
         }
 
-        // 仅保存到 localStorage（不触发云同步）
+        // 保存到 localStorage + IndexedDB（双写）
         function saveDataLocal() {
             if (!currentUser) return;
             localStorage.setItem(getStorageKey(), JSON.stringify(appState));
+            saveToIDB(currentUser, appState);
         }
 
         // 手动同步按钮
         async function manualSync() {
             if (isSyncing || !currentUser) return;
+            if (!getSyncPin()) {
+                document.getElementById('pin-prompt').style.display = 'flex';
+                return;
+            }
             isSyncing = true;
             updateSyncUI('syncing');
-            // 【修复】先从云端拉取最新 sha 和数据，合并后再推
             try {
                 const cloudData = await fetchFromCloud();
                 if (cloudData && cloudData.lastModified) {
                     const localHistory = appState.history || {};
                     const cloudHistory = cloudData.history || {};
                     const mergedHistory = mergeHistories(localHistory, cloudHistory);
-                    // 【修复5】用字段级合并替代二选一
                     const merged = mergeTodayData(appState, cloudData);
                     appState = merged;
                     appState.history = mergedHistory;
@@ -3430,7 +3389,10 @@
 
         // 网络状态监听
         window.addEventListener('online', () => {
-            if (currentUser) syncToCloud();
+            if (currentUser) {
+                syncToCloud();
+                processSyncQueue();
+            }
         });
 
         window.addEventListener('offline', () => {
@@ -3443,6 +3405,7 @@
                 document.getElementById('sync-time').textContent = formatSyncTime(lastSyncTime);
             }
         }, 60000);
+
 
         // ===== 体重 & BMI 功能 =====
         function calculateBMI(weight) {

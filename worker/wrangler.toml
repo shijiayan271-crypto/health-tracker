@@ -1,0 +1,10 @@
+name = "health-sync"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+AUTH_PIN = "1234"
+
+[[r2_buckets]]
+binding = "DATA_BUCKET"
+bucket_name = "health-tracker-data"
